@@ -1,0 +1,104 @@
+// NaijaArtisans data model
+// Switch `provider` to "postgresql" (and update DATABASE_URL) to deploy on Postgres.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection (used at runtime)
+  directUrl = env("DIRECT_URL")   // direct connection (used for migrations / db push)
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  phone     String?  @unique
+  password  String
+  role      String   @default("CUSTOMER") // CUSTOMER | ARTISAN
+  city      String?
+  bio       String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  services     Service[]
+  jobRequests  JobRequest[] @relation("CustomerJobs")
+  quotes       Quote[]
+  reviewsGiven Review[]     @relation("ReviewAuthor")
+  reviewsGot   Review[]     @relation("ReviewTarget")
+}
+
+model Category {
+  id   String  @id @default(cuid())
+  name String  @unique
+  slug String  @unique
+  icon String?
+
+  services    Service[]
+  jobRequests JobRequest[]
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  priceMin    Int?
+  priceMax    Int?
+  city        String
+  createdAt   DateTime @default(now())
+
+  artisan    User     @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  artisanId  String
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+
+  @@index([categoryId])
+  @@index([city])
+}
+
+model JobRequest {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  city        String
+  budget      Int?
+  status      String   @default("OPEN") // OPEN | CLOSED
+  createdAt   DateTime @default(now())
+
+  customer   User     @relation("CustomerJobs", fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+  quotes     Quote[]
+
+  @@index([categoryId])
+  @@index([city])
+}
+
+model Quote {
+  id        String   @id @default(cuid())
+  message   String
+  price     Int?
+  createdAt DateTime @default(now())
+
+  jobRequest   JobRequest @relation(fields: [jobRequestId], references: [id], onDelete: Cascade)
+  jobRequestId String
+  artisan      User       @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  artisanId    String
+
+  @@unique([jobRequestId, artisanId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  author   User   @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+  target   User   @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  targetId String
+}
