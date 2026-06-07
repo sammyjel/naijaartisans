@@ -19,10 +19,13 @@ export default function RootLayout({ children }) {
           <footer className="mt-16 border-t border-gray-200 bg-white">
             <div className="container-page flex flex-col items-center justify-between gap-3 py-8 text-sm text-gray-500 sm:flex-row">
               <p>© {new Date().getFullYear()} NaijaArtisans. Made for Nigeria 🇳🇬</p>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link href="/browse" className="hover:text-brand-700">Find Artisans</Link>
                 <Link href="/jobs" className="hover:text-brand-700">Job Board</Link>
                 <Link href="/register" className="hover:text-brand-700">Become an Artisan</Link>
+                <a href="mailto:sammyjel.ng@gmail.com" className="font-medium text-brand-700 hover:underline">
+                  Support: sammyjel.ng@gmail.com
+                </a>
               </div>
             </div>
           </footer>
