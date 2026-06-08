@@ -4,9 +4,39 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 
 export const metadata = {
-  title: "NaijaArtisans — Find trusted artisans & service pros in Nigeria",
+  metadataBase: new URL("https://naijaartisans.vercel.app"),
+  title: {
+    default: "NaijaArtisans — Find trusted artisans & service pros in Nigeria",
+    template: "%s | NaijaArtisans",
+  },
   description:
-    "Hire plumbers, electricians, tailors, caterers and more across Nigeria. Post a job and get quotes from skilled artisans near you.",
+    "Hire plumbers, electricians, tailors, caterers and more across Nigeria. Post a job for free and get quotes from skilled artisans near you.",
+  keywords: [
+    "Nigeria artisans", "find artisan Nigeria", "plumber Lagos", "electrician Abuja",
+    "tailor Nigeria", "hire artisan", "service marketplace Nigeria", "handyman Nigeria",
+    "post a job Nigeria", "skilled workers Nigeria",
+  ],
+  applicationName: "NaijaArtisans",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "en_NG",
+    url: "https://naijaartisans.vercel.app",
+    siteName: "NaijaArtisans",
+    title: "NaijaArtisans — Find trusted artisans in Nigeria",
+    description:
+      "Plumbers, electricians, tailors, caterers and more. Post a job for free and get quotes from skilled hands near you.",
+    images: [{ url: "/images/hero.jpg", width: 1600, height: 1000, alt: "Nigerian artisan at work" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NaijaArtisans — Find trusted artisans in Nigeria",
+    description: "Hire skilled artisans across Nigeria. Post a job for free and get quotes.",
+    images: ["/images/hero.jpg"],
+  },
+  robots: { index: true, follow: true },
+  // Google Search Console verification code goes here once added:
+  // verification: { google: "YOUR_CODE" },
 };
 
 export default function RootLayout({ children }) {
