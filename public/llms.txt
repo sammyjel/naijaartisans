@@ -1,0 +1,22 @@
+# NaijaArtisans
+
+> NaijaArtisans is a service marketplace that connects skilled Nigerian artisans — plumbers, electricians, tailors, caterers, mechanics, hairdressers and more — with customers who need their services. Customers search by category and city or post a job for free; artisans list services and send quotes. Inspired by Turkey's Armut and the Thumbtack/TaskRabbit model, built for the Nigerian market.
+
+## What you can do
+- Find artisans by category (plumbing, electrical, carpentry, tailoring, hairdressing, catering, cleaning, painting, AC & refrigeration, auto mechanic, masonry, welding, photography, tiling, generator repair, phone & computer repair) and by city (Lagos, Abuja, Port Harcourt, Kano, Ibadan, Benin City, Enugu and more).
+- View artisan profiles with services, price ranges, ratings and reviews.
+- Post a job for free and receive quotes from artisans nearby.
+- Register as an artisan to list services and quote on open jobs.
+
+## Key pages
+- [Home](https://naijaartisans.vercel.app/): Search and browse popular services.
+- [Browse artisans](https://naijaartisans.vercel.app/browse): Search and filter artisans by category and city.
+- [Job board](https://naijaartisans.vercel.app/jobs): Open jobs posted by customers.
+- [Post a job](https://naijaartisans.vercel.app/post-job): Customers describe a need and get quotes.
+- [About](https://naijaartisans.vercel.app/about): Project background, features and tech stack.
+
+## About
+- Type: Full-stack web application (Next.js, Prisma, PostgreSQL, Tailwind CSS), deployed on Vercel.
+- Region served: Nigeria.
+- Contact / support: sammyjel.ng@gmail.com
+- Source code: https://github.com/sammyjel/naijaartisans

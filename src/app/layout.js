@@ -2,6 +2,8 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
+import { organizationLd, websiteLd } from "@/lib/seo";
 
 export const metadata = {
   metadataBase: new URL("https://naijaartisans.vercel.app"),
@@ -43,6 +45,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <JsonLd data={organizationLd()} />
+        <JsonLd data={websiteLd()} />
         <AuthProvider>
           <Navbar />
           <main className="min-h-[calc(100vh-4rem)]">{children}</main>

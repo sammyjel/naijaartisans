@@ -1,45 +1,51 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import { CITIES } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
+import JobsFilters from "@/components/JobsFilters";
+import JsonLd from "@/components/JsonLd";
 import { naira, timeAgo } from "@/lib/format";
+import { breadcrumbLd } from "@/lib/seo";
 
-function JobsInner() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const category = params.get("category") || "";
-  const city = params.get("city") || "";
+export const dynamic = "force-dynamic";
 
-  const [categories, setCategories] = useState([]);
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
+export async function generateMetadata({ searchParams }) {
+  const { category, city } = searchParams;
+  const cat = category ? await prisma.category.findUnique({ where: { slug: category } }) : null;
+  const what = cat ? `${cat.name} jobs` : "Open jobs";
+  const where = city ? ` in ${city}` : " in Nigeria";
+  const title = `${what}${where} — Job board`;
+  const description = `Browse open ${cat ? cat.name.toLowerCase() + " " : ""}jobs${city ? ` in ${city}` : " across Nigeria"} and send a quote to win the work on NaijaArtisans.`;
 
-  useEffect(() => {
-    fetch("/api/categories").then((r) => r.json()).then((d) => setCategories(d.categories || []));
-  }, []);
+  const qs = new URLSearchParams();
+  if (category) qs.set("category", category);
+  if (city) qs.set("city", city);
+  const canonical = qs.toString() ? `/jobs?${qs.toString()}` : "/jobs";
 
-  useEffect(() => {
-    setLoading(true);
-    const sp = new URLSearchParams();
-    if (category) sp.set("category", category);
-    if (city) sp.set("city", city);
-    fetch(`/api/jobs?${sp.toString()}`)
-      .then((r) => r.json())
-      .then((d) => setJobs(d.jobs || []))
-      .finally(() => setLoading(false));
-  }, [category, city]);
+  return { title, description, alternates: { canonical } };
+}
 
-  function setParam(key, value) {
-    const sp = new URLSearchParams(params.toString());
-    if (value) sp.set(key, value);
-    else sp.delete(key);
-    router.push(`/jobs?${sp.toString()}`);
-  }
+export default async function JobsPage({ searchParams }) {
+  const { category = "", city = "" } = searchParams;
+  const where = {};
+  if (category) where.category = { slug: category };
+  if (city) where.city = city;
+
+  const [categories, jobs] = await Promise.all([
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.jobRequest.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        category: true,
+        customer: { select: { id: true, name: true, city: true } },
+        _count: { select: { quotes: true } },
+      },
+    }),
+  ]);
 
   return (
     <div className="container-page py-8">
+      <JsonLd data={breadcrumbLd([{ name: "Home", url: "/" }, { name: "Job board", url: "/jobs" }])} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Job board</h1>
@@ -48,25 +54,12 @@ function JobsInner() {
         <Link href="/post-job" className="btn-primary">Post a job</Link>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <select className="input sm:w-56" value={category} onChange={(e) => setParam("category", e.target.value)}>
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.slug}>{c.name}</option>
-          ))}
-        </select>
-        <select className="input sm:w-44" value={city} onChange={(e) => setParam("city", e.target.value)}>
-          <option value="">All cities</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+      <div className="mt-5">
+        <JobsFilters categories={categories} category={category} city={city} />
       </div>
 
       <div className="mt-6 space-y-4">
-        {loading ? (
-          <p className="text-gray-500">Loading jobs…</p>
-        ) : jobs.length === 0 ? (
+        {jobs.length === 0 ? (
           <div className="card p-10 text-center text-gray-500">No open jobs match your filters yet.</div>
         ) : (
           jobs.map((j) => (
@@ -77,7 +70,7 @@ function JobsInner() {
                   {j.status}
                 </span>
               </div>
-              <h3 className="mt-2 font-semibold">{j.title}</h3>
+              <h2 className="mt-2 font-semibold">{j.title}</h2>
               <p className="mt-1 line-clamp-2 text-sm text-gray-500">{j.description}</p>
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                 <span>📍 {j.city}</span>
@@ -90,13 +83,5 @@ function JobsInner() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function JobsPage() {
-  return (
-    <Suspense fallback={<div className="container-page py-12 text-center text-gray-500">Loading…</div>}>
-      <JobsInner />
-    </Suspense>
   );
 }

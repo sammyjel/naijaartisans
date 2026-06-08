@@ -2,9 +2,43 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import SearchBar from "@/components/SearchBar";
+import JsonLd from "@/components/JsonLd";
 import { priceRange } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+const FAQS = [
+  {
+    q: "What is NaijaArtisans?",
+    a: "NaijaArtisans is a service marketplace that connects skilled Nigerian artisans — plumbers, electricians, tailors, caterers, mechanics and more — with customers who need their services. You can browse artisans near you or post a job for free and receive quotes.",
+  },
+  {
+    q: "How do I find an artisan near me?",
+    a: "Search by the service you need and your city on the home page or the Browse page. You'll see artisan profiles with their services, price ranges, ratings and reviews so you can choose the best fit.",
+  },
+  {
+    q: "Is it free to post a job?",
+    a: "Yes. Posting a job on NaijaArtisans is completely free. Describe what you need and where, and artisans nearby will send you quotes.",
+  },
+  {
+    q: "How do artisans get work on NaijaArtisans?",
+    a: "Artisans register, list their services by category, city and price range, and send quotes on open jobs from the Job Board. Customers can also find and contact them directly from their profile.",
+  },
+  {
+    q: "Which cities does NaijaArtisans cover?",
+    a: "NaijaArtisans serves cities across Nigeria including Lagos, Abuja, Port Harcourt, Kano, Ibadan, Benin City and Enugu, with more being added.",
+  },
+];
+
+const faqLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
 
 // Popular categories that have a matching photo in /public/images.
 const POPULAR = [
@@ -154,6 +188,23 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="container-page py-14">
+        <JsonLd data={faqLd} />
+        <h2 className="text-center text-2xl font-bold">Frequently asked questions</h2>
+        <div className="mx-auto mt-8 max-w-3xl divide-y divide-gray-200">
+          {FAQS.map((f) => (
+            <details key={f.q} className="group py-4">
+              <summary className="flex cursor-pointer items-center justify-between font-semibold text-gray-900">
+                {f.q}
+                <span className="ml-4 text-brand-600 transition group-open:rotate-45">+</span>
+              </summary>
+              <p className="mt-2 text-gray-600">{f.a}</p>
+            </details>
+          ))}
         </div>
       </section>
     </div>

@@ -5,8 +5,33 @@ import { getCurrentUser } from "@/lib/auth";
 import { priceRange, timeAgo } from "@/lib/format";
 import Stars from "@/components/Stars";
 import ReviewForm from "@/components/ReviewForm";
+import JsonLd from "@/components/JsonLd";
+import { SITE, breadcrumbLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }) {
+  const artisan = await prisma.user.findUnique({
+    where: { id: params.id },
+    select: {
+      name: true, city: true, bio: true, role: true,
+      services: { select: { category: { select: { name: true } } }, take: 1 },
+    },
+  });
+  if (!artisan || artisan.role !== "ARTISAN") return { title: "Artisan not found" };
+
+  const trade = artisan.services[0]?.category?.name;
+  const where = artisan.city ? ` in ${artisan.city}` : "";
+  const title = trade ? `${artisan.name} — ${trade}${where}` : `${artisan.name} — Artisan${where}`;
+  const description = (artisan.bio || `Hire ${artisan.name}, a trusted ${trade ? trade.toLowerCase() : "artisan"}${where} on NaijaArtisans. See services, prices and reviews.`).slice(0, 160);
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/artisans/${params.id}` },
+    openGraph: { title: `${title} | NaijaArtisans`, description, type: "profile" },
+  };
+}
 
 export default async function ArtisanProfilePage({ params }) {
   const [artisan, viewer] = await Promise.all([
@@ -27,8 +52,54 @@ export default async function ArtisanProfilePage({ params }) {
   const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
   const loggedIn = Boolean(viewer);
 
+  const businessLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: artisan.name,
+    url: `${SITE.url}/artisans/${artisan.id}`,
+    description: artisan.bio || undefined,
+    image: SITE.logo,
+    areaServed: artisan.city || "Nigeria",
+    address: artisan.city
+      ? { "@type": "PostalAddress", addressLocality: artisan.city, addressCountry: "NG" }
+      : undefined,
+    ...(ratings.length
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: avg.toFixed(1),
+            reviewCount: ratings.length,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
+    ...(artisan.reviewsGot.length
+      ? {
+          review: artisan.reviewsGot.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
+            author: { "@type": "Person", name: r.author.name },
+            reviewBody: r.comment || undefined,
+          })),
+        }
+      : {}),
+    makesOffer: artisan.services.map((s) => ({
+      "@type": "Offer",
+      itemOffered: { "@type": "Service", name: s.title, category: s.category.name },
+    })),
+  };
+
   return (
     <div className="container-page py-8">
+      <JsonLd data={businessLd} />
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", url: "/" },
+          { name: "Browse artisans", url: "/browse" },
+          { name: artisan.name, url: `/artisans/${artisan.id}` },
+        ])}
+      />
       <Link href="/browse" className="text-sm text-gray-500 hover:text-brand-700">← Back to results</Link>
 
       <div className="mt-4 grid gap-6 lg:grid-cols-3">

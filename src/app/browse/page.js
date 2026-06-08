@@ -1,93 +1,77 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import { CITIES } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
+import BrowseFilters from "@/components/BrowseFilters";
+import JsonLd from "@/components/JsonLd";
 import { priceRange } from "@/lib/format";
+import { SITE, breadcrumbLd } from "@/lib/seo";
 
-function BrowseInner() {
-  const router = useRouter();
-  const params = useSearchParams();
+export const dynamic = "force-dynamic";
 
-  const category = params.get("category") || "";
-  const city = params.get("city") || "";
-  const q = params.get("q") || "";
+function buildWhere({ category, city, q }) {
+  const where = {};
+  if (category) where.category = { slug: category };
+  if (city) where.city = city;
+  if (q) where.OR = [{ title: { contains: q } }, { description: { contains: q } }];
+  return where;
+}
 
-  const [categories, setCategories] = useState([]);
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState(q);
+export async function generateMetadata({ searchParams }) {
+  const { category, city } = searchParams;
+  const cat = category ? await prisma.category.findUnique({ where: { slug: category } }) : null;
+  const what = cat ? cat.name : "Trusted artisans & service pros";
+  const where = city ? ` in ${city}` : " in Nigeria";
+  const title = `${what}${where}`;
+  const description = `Find and hire ${cat ? cat.name.toLowerCase() : "skilled artisans"}${city ? ` in ${city}` : " across Nigeria"}. Compare profiles, prices and reviews — or post a job for free on NaijaArtisans.`;
 
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((r) => r.json())
-      .then((d) => setCategories(d.categories || []));
-  }, []);
+  const qs = new URLSearchParams();
+  if (category) qs.set("category", category);
+  if (city) qs.set("city", city);
+  const canonical = qs.toString() ? `/browse?${qs.toString()}` : "/browse";
 
-  useEffect(() => {
-    setLoading(true);
-    const sp = new URLSearchParams();
-    if (category) sp.set("category", category);
-    if (city) sp.set("city", city);
-    if (q) sp.set("q", q);
-    fetch(`/api/services?${sp.toString()}`)
-      .then((r) => r.json())
-      .then((d) => setServices(d.services || []))
-      .finally(() => setLoading(false));
-  }, [category, city, q]);
+  return { title, description, alternates: { canonical } };
+}
 
-  function setParam(key, value) {
-    const sp = new URLSearchParams(params.toString());
-    if (value) sp.set(key, value);
-    else sp.delete(key);
-    router.push(`/browse?${sp.toString()}`);
-  }
-
-  function submitSearch(e) {
-    e.preventDefault();
-    setParam("q", search.trim());
-  }
+export default async function BrowsePage({ searchParams }) {
+  const { category = "", city = "", q = "" } = searchParams;
+  const [categories, services] = await Promise.all([
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.service.findMany({
+      where: buildWhere({ category, city, q }),
+      orderBy: { createdAt: "desc" },
+      include: { category: true, artisan: { select: { id: true, name: true, city: true } } },
+    }),
+  ]);
 
   const activeCategory = categories.find((c) => c.slug === category);
+  const heading = activeCategory ? `${activeCategory.icon} ${activeCategory.name}` : "Find an artisan";
+
+  const itemListLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: services.slice(0, 20).map((s, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${SITE.url}/artisans/${s.artisan.id}`,
+      name: `${s.title} — ${s.artisan.name}`,
+    })),
+  };
 
   return (
     <div className="container-page py-8">
+      <JsonLd data={breadcrumbLd([{ name: "Home", url: "/" }, { name: "Browse artisans", url: "/browse" }])} />
+      <JsonLd data={itemListLd} />
+
       <h1 className="text-2xl font-bold">
-        {activeCategory ? `${activeCategory.icon} ${activeCategory.name}` : "Find an artisan"}
+        {heading}
         {city ? <span className="text-gray-400"> in {city}</span> : null}
       </h1>
 
-      {/* Filters */}
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <form onSubmit={submitSearch} className="flex flex-1 gap-2">
-          <input
-            className="input"
-            placeholder="Search services..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <button className="btn-primary">Search</button>
-        </form>
-        <select className="input sm:w-48" value={category} onChange={(e) => setParam("category", e.target.value)}>
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.slug}>{c.name}</option>
-          ))}
-        </select>
-        <select className="input sm:w-44" value={city} onChange={(e) => setParam("city", e.target.value)}>
-          <option value="">All cities</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+      <div className="mt-5">
+        <BrowseFilters categories={categories} category={category} city={city} q={q} />
       </div>
 
-      {/* Results */}
       <div className="mt-6">
-        {loading ? (
-          <p className="text-gray-500">Loading artisans…</p>
-        ) : services.length === 0 ? (
+        {services.length === 0 ? (
           <div className="card p-10 text-center">
             <p className="text-lg font-semibold">No artisans found</p>
             <p className="mt-1 text-gray-500">Try a different category or city — or post a job and let artisans come to you.</p>
@@ -100,7 +84,7 @@ function BrowseInner() {
               {services.map((s) => (
                 <Link key={s.id} href={`/artisans/${s.artisan.id}`} className="card p-5 transition hover:shadow-md">
                   <span className="badge">{s.category.icon} {s.category.name}</span>
-                  <h3 className="mt-3 font-semibold">{s.title}</h3>
+                  <h2 className="mt-3 font-semibold">{s.title}</h2>
                   <p className="mt-1 line-clamp-2 text-sm text-gray-500">{s.description}</p>
                   <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">
                     <span className="text-gray-600">{s.artisan.name} · {s.city}</span>
@@ -113,13 +97,5 @@ function BrowseInner() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function BrowsePage() {
-  return (
-    <Suspense fallback={<div className="container-page py-12 text-center text-gray-500">Loading…</div>}>
-      <BrowseInner />
-    </Suspense>
   );
 }
