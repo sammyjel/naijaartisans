@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { SITE_URL } from "@/lib/seo";
 
-const BASE = "https://naijaartisans.vercel.app";
+const BASE = SITE_URL;
 
 // Generated on-demand so the build never depends on the database being awake.
 export const dynamic = "force-dynamic";

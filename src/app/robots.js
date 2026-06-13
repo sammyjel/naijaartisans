@@ -1,3 +1,5 @@
+import { SITE_URL } from "@/lib/seo";
+
 export default function robots() {
   return {
     rules: {
@@ -6,7 +8,7 @@ export default function robots() {
       // Don't waste crawl budget on auth-only / action pages
       disallow: ["/dashboard", "/post-job", "/services/new", "/login", "/api/"],
     },
-    sitemap: "https://naijaartisans.vercel.app/sitemap.xml",
-    host: "https://naijaartisans.vercel.app",
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

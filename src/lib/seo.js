@@ -1,12 +1,18 @@
 // Shared site constants + JSON-LD builders for SEO / LLM optimization.
 
+// Single source of truth for the canonical site URL.
+// Override per-environment via NEXT_PUBLIC_SITE_URL; defaults to the production domain.
+export const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL || "https://naijaartisans.com"
+).replace(/\/$/, "");
+
 export const SITE = {
   name: "NaijaArtisans",
-  url: "https://naijaartisans.vercel.app",
+  url: SITE_URL,
   description:
     "NaijaArtisans is a service marketplace that connects skilled Nigerian artisans — plumbers, electricians, tailors, caterers, mechanics and more — with customers who need their services.",
   email: "sammyjel.ng@gmail.com",
-  logo: "https://naijaartisans.vercel.app/images/hero.jpg",
+  logo: `${SITE_URL}/images/hero.jpg`,
 };
 
 export function organizationLd() {

@@ -3,10 +3,10 @@ import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
-import { organizationLd, websiteLd } from "@/lib/seo";
+import { organizationLd, websiteLd, SITE_URL } from "@/lib/seo";
 
 export const metadata = {
-  metadataBase: new URL("https://naijaartisans.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "NaijaArtisans — Find trusted artisans & service pros in Nigeria",
     template: "%s | NaijaArtisans",
@@ -23,7 +23,7 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_NG",
-    url: "https://naijaartisans.vercel.app",
+    url: SITE_URL,
     siteName: "NaijaArtisans",
     title: "NaijaArtisans — Find trusted artisans in Nigeria",
     description:
