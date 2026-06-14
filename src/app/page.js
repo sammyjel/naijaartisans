@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import SearchBar from "@/components/SearchBar";
 import JsonLd from "@/components/JsonLd";
 import { priceRange } from "@/lib/format";
+import { CITIES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +108,7 @@ export default async function HomePage() {
           {POPULAR.map((p) => (
             <Link
               key={p.slug}
-              href={`/browse?category=${p.slug}`}
+              href={`/services/${p.slug}`}
               className="group relative aspect-[4/3] overflow-hidden rounded-2xl shadow-sm"
             >
               <Image
@@ -128,12 +129,15 @@ export default async function HomePage() {
 
       {/* All categories */}
       <section className="container-page pb-4">
-        <h2 className="text-2xl font-bold">Browse all categories</h2>
+        <div className="flex items-end justify-between">
+          <h2 className="text-2xl font-bold">Browse all categories</h2>
+          <Link href="/services" className="text-sm font-semibold text-brand-700 hover:underline">All services →</Link>
+        </div>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {categories.map((c) => (
             <Link
               key={c.id}
-              href={`/browse?category=${c.slug}`}
+              href={`/services/${c.slug}`}
               className="card flex items-center gap-3 p-4 transition hover:border-brand-300 hover:shadow-md"
             >
               <span className="text-2xl">{c.icon || "🛠️"}</span>
@@ -141,6 +145,23 @@ export default async function HomePage() {
                 <span className="block font-semibold">{c.name}</span>
                 <span className="text-xs text-gray-400">{c._count.services} {c._count.services === 1 ? "pro" : "pros"}</span>
               </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Browse by city */}
+      <section className="container-page py-10">
+        <h2 className="text-2xl font-bold">Find artisans by city</h2>
+        <p className="mt-1 text-gray-500">Hire trusted hands in your area across Nigeria.</p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          {CITIES.map((city) => (
+            <Link
+              key={city}
+              href={`/browse?city=${encodeURIComponent(city)}`}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-brand-300 hover:text-brand-700"
+            >
+              {city}
             </Link>
           ))}
         </div>

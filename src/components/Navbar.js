@@ -26,6 +26,7 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-1 md:flex">
           <Link href="/browse" className="btn-ghost">Find Artisans</Link>
+          <Link href="/services" className="btn-ghost">Services</Link>
           <Link href="/jobs" className="btn-ghost">Job Board</Link>
           <a href="mailto:sammyjel.ng@gmail.com" className="btn-ghost">Help</a>
           {!loading && !user && (
@@ -52,6 +53,7 @@ export default function Navbar() {
         <div className="border-t border-gray-200 bg-white md:hidden">
           <div className="container-page flex flex-col gap-1 py-3">
             <Link href="/browse" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Find Artisans</Link>
+            <Link href="/services" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Services</Link>
             <Link href="/jobs" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Job Board</Link>
             <a href="mailto:sammyjel.ng@gmail.com" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Help</a>
             {!loading && !user && (
