@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
+import { Analytics } from "@vercel/analytics/react";
 import { organizationLd, websiteLd, SITE_URL } from "@/lib/seo";
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
@@ -86,6 +87,7 @@ export default function RootLayout({ children }) {
             </div>
           </footer>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
