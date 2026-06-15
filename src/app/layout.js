@@ -1,9 +1,12 @@
 import "./globals.css";
+import Script from "next/script";
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { organizationLd, websiteLd, SITE_URL } from "@/lib/seo";
+
+const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
@@ -45,6 +48,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        {ADSENSE_CLIENT && (
+          <Script
+            id="adsbygoogle-init"
+            async
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+          />
+        )}
         <JsonLd data={organizationLd()} />
         <JsonLd data={websiteLd()} />
         <AuthProvider>
@@ -57,6 +69,7 @@ export default function RootLayout({ children }) {
                 <div className="flex flex-wrap items-center justify-center gap-4">
                   <Link href="/browse" className="hover:text-brand-700">Find Artisans</Link>
                   <Link href="/jobs" className="hover:text-brand-700">Job Board</Link>
+                  <Link href="/pricing" className="hover:text-brand-700">Pricing</Link>
                   <Link href="/about" className="hover:text-brand-700">About</Link>
                   <a href="mailto:sammyjel.ng@gmail.com" className="font-medium text-brand-700 hover:underline">
                     Support: sammyjel.ng@gmail.com

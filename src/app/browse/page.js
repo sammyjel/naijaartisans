@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import BrowseFilters from "@/components/BrowseFilters";
 import JsonLd from "@/components/JsonLd";
+import AdSlot from "@/components/AdSlot";
 import { priceRange } from "@/lib/format";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
@@ -69,6 +70,8 @@ export default async function BrowsePage({ searchParams }) {
       <div className="mt-5">
         <BrowseFilters categories={categories} category={category} city={city} q={q} />
       </div>
+
+      <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT} className="mt-6" />
 
       <div className="mt-6">
         {services.length === 0 ? (
