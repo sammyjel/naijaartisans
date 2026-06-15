@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import ShareButtons from "@/components/ShareButtons";
 import { naira, timeAgo } from "@/lib/format";
+import { SITE } from "@/lib/seo";
 
 export default function JobDetailPage() {
   const { id } = useParams();
@@ -188,6 +190,14 @@ export default function JobDetailPage() {
                 </button>
               </form>
             )}
+          </div>
+
+          <div className="card p-6">
+            <ShareButtons
+              url={`${SITE.url}/jobs/${id}`}
+              title={`${job.title} — ${job.category.name} job in ${job.city}`}
+              label="Know an artisan for this job? Share 👇"
+            />
           </div>
         </div>
       </div>

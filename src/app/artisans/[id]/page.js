@@ -6,6 +6,7 @@ import { priceRange, timeAgo } from "@/lib/format";
 import Stars from "@/components/Stars";
 import ReviewForm from "@/components/ReviewForm";
 import JsonLd from "@/components/JsonLd";
+import ShareButtons from "@/components/ShareButtons";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -201,6 +202,14 @@ export default async function ArtisanProfilePage({ params }) {
             <h3 className="font-semibold text-brand-800">Need something specific?</h3>
             <p className="mt-1 text-sm text-brand-700">Post a job and get quotes from multiple artisans.</p>
             <Link href="/post-job" className="btn-primary mt-3 w-full">Post a job</Link>
+          </div>
+
+          <div className="card p-6">
+            <ShareButtons
+              url={`${SITE.url}/artisans/${artisan.id}`}
+              title={`${artisan.name}${artisan.services[0]?.category ? ` — ${artisan.services[0].category.name}` : ""}${artisan.city ? ` in ${artisan.city}` : ""}`}
+              label="Know someone who needs this? Share 👇"
+            />
           </div>
         </div>
       </div>
