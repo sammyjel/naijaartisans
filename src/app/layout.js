@@ -70,6 +70,7 @@ export default function RootLayout({ children }) {
                 <div className="flex flex-wrap items-center justify-center gap-4">
                   <Link href="/browse" className="hover:text-brand-700">Find Artisans</Link>
                   <Link href="/jobs" className="hover:text-brand-700">Job Board</Link>
+                  <Link href="/join" className="hover:text-brand-700">For Artisans</Link>
                   <Link href="/pricing" className="hover:text-brand-700">Pricing</Link>
                   <Link href="/about" className="hover:text-brand-700">About</Link>
                   <a href="mailto:sammyjel.ng@gmail.com" className="font-medium text-brand-700 hover:underline">

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import ShareButtons from "@/components/ShareButtons";
 import { naira, priceRange, timeAgo } from "@/lib/format";
+import { SITE } from "@/lib/seo";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -60,6 +62,29 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Artisan: invite & grow */}
+      {isArtisan && (
+        <section className="mt-8">
+          <div className="card bg-brand-50 p-6">
+            <h2 className="text-lg font-bold text-brand-800">Invite artisans, grow together 🤝</h2>
+            <p className="mt-1 text-sm text-brand-700">
+              Know other plumbers, electricians, tailors or mechanics? Share your invite link — the
+              more skilled hands on NaijaArtisans, the more customers we all attract.
+            </p>
+            <div className="mt-4 rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm text-gray-600 break-all">
+              {SITE.url}/join?ref={user.id}
+            </div>
+            <div className="mt-4">
+              <ShareButtons
+                url={`${SITE.url}/join?ref=${user.id}`}
+                title="Join me on NaijaArtisans and get more jobs — list your business free"
+                label="Share your invite 👇"
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Artisan: my services */}
       {isArtisan && (

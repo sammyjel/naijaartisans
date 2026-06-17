@@ -12,6 +12,7 @@ function RegisterForm() {
   const { refresh } = useAuth();
 
   const [role, setRole] = useState(params.get("role") === "artisan" ? "ARTISAN" : "CUSTOMER");
+  const ref = params.get("ref") || "";
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", city: "", bio: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,7 @@ function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, role }),
+        body: JSON.stringify({ ...form, role, ref }),
       });
       const data = await res.json();
       if (!res.ok) {
