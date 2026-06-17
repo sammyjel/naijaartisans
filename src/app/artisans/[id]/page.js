@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { priceRange, timeAgo } from "@/lib/format";
+import { priceRange, timeAgo, isFeatured } from "@/lib/format";
 import Stars from "@/components/Stars";
 import ReviewForm from "@/components/ReviewForm";
 import JsonLd from "@/components/JsonLd";
@@ -39,7 +39,7 @@ export default async function ArtisanProfilePage({ params }) {
     prisma.user.findUnique({
       where: { id: params.id },
       select: {
-        id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true,
+        id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true, featuredUntil: true,
         services: { include: { category: true }, orderBy: { createdAt: "desc" } },
         reviewsGot: { include: { author: { select: { id: true, name: true } } }, orderBy: { createdAt: "desc" } },
       },
@@ -112,7 +112,12 @@ export default async function ArtisanProfilePage({ params }) {
                 {artisan.name.charAt(0)}
               </div>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold">{artisan.name}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-bold">{artisan.name}</h1>
+                  {isFeatured(artisan.featuredUntil) && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">⭐ Featured</span>
+                  )}
+                </div>
                 <p className="text-gray-500">{artisan.city || "Nigeria"} · Joined {timeAgo(artisan.createdAt)}</p>
                 <div className="mt-2"><Stars value={avg} count={ratings.length} /></div>
               </div>

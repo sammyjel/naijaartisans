@@ -23,11 +23,19 @@ model User {
   avatarUrl String?
   createdAt DateTime @default(now())
 
+  // Monetization & growth
+  featuredUntil DateTime? // artisan shows at the top with a badge while in the future
+  proUntil      DateTime? // active Pro subscription expiry
+  referredById  String? // the artisan who invited this user
+
   services     Service[]
   jobRequests  JobRequest[] @relation("CustomerJobs")
   quotes       Quote[]
   reviewsGiven Review[]     @relation("ReviewAuthor")
   reviewsGot   Review[]     @relation("ReviewTarget")
+
+  referredBy User?  @relation("Referrals", fields: [referredById], references: [id])
+  referrals  User[] @relation("Referrals")
 }
 
 model Category {

@@ -5,7 +5,7 @@ import { hashPassword, setAuthCookie } from "@/lib/auth";
 export async function POST(request) {
   try {
     const body = await request.json();
-    let { name, email, phone, password, role, city, bio } = body;
+    let { name, email, phone, password, role, city, bio, ref } = body;
 
     name = (name || "").trim();
     email = (email || "").trim().toLowerCase() || null;
@@ -30,10 +30,35 @@ export async function POST(request) {
       if (exists) return NextResponse.json({ error: "Phone number is already registered." }, { status: 409 });
     }
 
+    // Referral attribution — only link to a real existing referrer.
+    let referredById = null;
+    const refId = (ref || "").trim();
+    if (refId) {
+      const referrer = await prisma.user.findUnique({ where: { id: refId }, select: { id: true } });
+      if (referrer && referrer.id !== null) referredById = referrer.id;
+    }
+
     const user = await prisma.user.create({
-      data: { name, email, phone, password: await hashPassword(password), role, city, bio },
+      data: { name, email, phone, password: await hashPassword(password), role, city, bio, referredById },
       select: { id: true, name: true, email: true, phone: true, role: true, city: true },
     });
+
+    // Reward the referrer with extra Featured time (extend from now or their current expiry).
+    if (referredById) {
+      try {
+        const referrer = await prisma.user.findUnique({
+          where: { id: referredById },
+          select: { featuredUntil: true },
+        });
+        const base = referrer?.featuredUntil && new Date(referrer.featuredUntil) > new Date()
+          ? new Date(referrer.featuredUntil)
+          : new Date();
+        const extended = new Date(base.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days per referral
+        await prisma.user.update({ where: { id: referredById }, data: { featuredUntil: extended } });
+      } catch (e) {
+        console.error("referral reward failed", e); // never block signup on this
+      }
+    }
 
     setAuthCookie(user.id);
     return NextResponse.json({ user }, { status: 201 });

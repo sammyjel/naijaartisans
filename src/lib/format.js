@@ -16,6 +16,18 @@ export function priceRange(min, max) {
   return "Negotiable";
 }
 
+// True if a featuredUntil / proUntil timestamp is still in the future.
+export function isFeatured(until) {
+  return until ? new Date(until).getTime() > Date.now() : false;
+}
+
+// Sort services so featured artisans come first (stable: preserves input order otherwise).
+export function featuredFirst(services) {
+  return [...services].sort(
+    (a, b) => (isFeatured(b.artisan?.featuredUntil) ? 1 : 0) - (isFeatured(a.artisan?.featuredUntil) ? 1 : 0)
+  );
+}
+
 export function timeAgo(date) {
   const d = new Date(date);
   const seconds = Math.floor((Date.now() - d.getTime()) / 1000);

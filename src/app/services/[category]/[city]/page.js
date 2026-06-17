@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import JsonLd from "@/components/JsonLd";
-import { priceRange } from "@/lib/format";
+import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { cityFromSlug, citySlug } from "@/lib/constants";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
@@ -16,7 +16,7 @@ async function load(categorySlug, citySlugParam) {
   const services = await prisma.service.findMany({
     where: { categoryId: category.id, city },
     orderBy: { createdAt: "desc" },
-    include: { artisan: { select: { id: true, name: true } } },
+    include: { artisan: { select: { id: true, name: true, featuredUntil: true } } },
   });
   return { category, city, services };
 }
@@ -49,6 +49,7 @@ export default async function LocalLandingPage({ params }) {
   const { category, city, services } = await load(params.category, params.city);
   if (!city || !category) notFound();
 
+  const ordered = featuredFirst(services);
   const name = category.name;
   const lower = name.toLowerCase();
 
@@ -130,9 +131,14 @@ export default async function LocalLandingPage({ params }) {
               {services.length} {lower} {services.length === 1 ? "professional" : "professionals"} in {city}
             </p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {services.map((s) => (
-                <Link key={s.id} href={`/artisans/${s.artisan.id}`} className="card p-5 transition hover:shadow-md">
-                  <span className="badge">{category.icon} {name}</span>
+              {ordered.map((s) => (
+                <Link key={s.id} href={`/artisans/${s.artisan.id}`} className={`card p-5 transition hover:shadow-md ${isFeatured(s.artisan.featuredUntil) ? "ring-1 ring-amber-300" : ""}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="badge">{category.icon} {name}</span>
+                    {isFeatured(s.artisan.featuredUntil) && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">⭐ Featured</span>
+                    )}
+                  </div>
                   <h2 className="mt-3 font-semibold">{s.title}</h2>
                   <p className="mt-1 line-clamp-2 text-sm text-gray-500">{s.description}</p>
                   <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">

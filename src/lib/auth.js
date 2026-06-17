@@ -68,6 +68,9 @@ export async function getCurrentUser() {
       bio: true,
       avatarUrl: true,
       createdAt: true,
+      featuredUntil: true,
+      proUntil: true,
+      _count: { select: { referrals: true } },
     },
   });
   return user;

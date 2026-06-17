@@ -3,7 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import SearchBar from "@/components/SearchBar";
 import JsonLd from "@/components/JsonLd";
-import { priceRange } from "@/lib/format";
+import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { CITIES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -60,9 +60,11 @@ export default async function HomePage() {
     prisma.service.findMany({
       take: 6,
       orderBy: { createdAt: "desc" },
-      include: { category: true, artisan: { select: { id: true, name: true, city: true } } },
+      include: { category: true, artisan: { select: { id: true, name: true, city: true, featuredUntil: true } } },
     }),
   ]);
+
+  const featuredOrdered = featuredFirst(featured);
 
   return (
     <div>
@@ -175,9 +177,14 @@ export default async function HomePage() {
             <Link href="/browse" className="text-sm font-semibold text-brand-700 hover:underline">View all →</Link>
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((s) => (
-              <Link key={s.id} href={`/artisans/${s.artisan.id}`} className="card p-5 transition hover:shadow-md">
-                <span className="badge">{s.category.icon} {s.category.name}</span>
+            {featuredOrdered.map((s) => (
+              <Link key={s.id} href={`/artisans/${s.artisan.id}`} className={`card p-5 transition hover:shadow-md ${isFeatured(s.artisan.featuredUntil) ? "ring-1 ring-amber-300" : ""}`}>
+                <div className="flex items-center justify-between">
+                  <span className="badge">{s.category.icon} {s.category.name}</span>
+                  {isFeatured(s.artisan.featuredUntil) && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">⭐ Featured</span>
+                  )}
+                </div>
                 <h3 className="mt-3 font-semibold">{s.title}</h3>
                 <p className="mt-1 line-clamp-2 text-sm text-gray-500">{s.description}</p>
                 <div className="mt-3 flex items-center justify-between text-sm">

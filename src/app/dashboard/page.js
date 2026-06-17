@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import ShareButtons from "@/components/ShareButtons";
-import { naira, priceRange, timeAgo } from "@/lib/format";
+import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
 export default function DashboardPage() {
@@ -69,9 +69,22 @@ export default function DashboardPage() {
           <div className="card bg-brand-50 p-6">
             <h2 className="text-lg font-bold text-brand-800">Invite artisans, grow together 🤝</h2>
             <p className="mt-1 text-sm text-brand-700">
-              Know other plumbers, electricians, tailors or mechanics? Share your invite link — the
-              more skilled hands on NaijaArtisans, the more customers we all attract.
+              Know other plumbers, electricians, tailors or mechanics? Share your invite link — every
+              artisan who joins earns you <strong>7 days of free Featured placement</strong>.
             </p>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <div className="rounded-lg bg-white px-4 py-2 text-sm">
+                <span className="font-bold text-brand-700">{user._count?.referrals ?? 0}</span>{" "}
+                <span className="text-gray-500">artisan{(user._count?.referrals ?? 0) === 1 ? "" : "s"} invited</span>
+              </div>
+              {isFeatured(user.featuredUntil) && (
+                <div className="rounded-lg bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800">
+                  ⭐ Featured until {new Date(user.featuredUntil).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                </div>
+              )}
+            </div>
+
             <div className="mt-4 rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm text-gray-600 break-all">
               {SITE.url}/join?ref={user.id}
             </div>
