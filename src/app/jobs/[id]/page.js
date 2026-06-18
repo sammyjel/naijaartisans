@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import ShareButtons from "@/components/ShareButtons";
+import ReviewForm from "@/components/ReviewForm";
 import { naira, timeAgo } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
@@ -122,6 +123,13 @@ export default function JobDetailPage() {
           {/* Quotes */}
           <div className="card p-6">
             <h2 className="text-lg font-bold">Quotes ({job.quotes.length})</h2>
+            {isOwner && job.quotes.length > 0 && (
+              <div className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
+                {job.status === "CLOSED"
+                  ? "✅ Job done? Rate the artisans below — your review rewards great work and helps other customers."
+                  : "⭐ Hired one of these artisans? You can rate them below once the work is done."}
+              </div>
+            )}
             <div className="mt-4 space-y-4">
               {job.quotes.length === 0 ? (
                 <p className="text-gray-500">No quotes yet.</p>
@@ -142,6 +150,15 @@ export default function JobDetailPage() {
                         {q.artisan.phone && <a href={`tel:${q.artisan.phone}`} className="font-medium text-brand-700">📞 {q.artisan.phone}</a>}
                         {q.artisan.email && <a href={`mailto:${q.artisan.email}`} className="font-medium text-brand-700">✉️ Email</a>}
                       </div>
+                    )}
+                    {/* Owner can rate the artisan after the transaction */}
+                    {isOwner && (
+                      <details className="mt-3 border-t border-gray-100 pt-3">
+                        <summary className="cursor-pointer text-sm font-semibold text-brand-700">⭐ Rate {q.artisan.name.split(" ")[0]}</summary>
+                        <div className="mt-3">
+                          <ReviewForm targetId={q.artisan.id} />
+                        </div>
+                      </details>
                     )}
                   </div>
                 ))
