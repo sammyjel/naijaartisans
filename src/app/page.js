@@ -197,6 +197,30 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Primary CTAs — Post a Job / Get a Quote */}
+      <section className="container-page py-10">
+        <div className="rounded-2xl bg-gradient-to-r from-brand-700 to-brand-600 p-8 text-center text-white shadow-sm sm:p-12">
+          <h2 className="text-2xl font-bold sm:text-3xl">Need a job done? Get started in minutes</h2>
+          <p className="mx-auto mt-2 max-w-xl text-brand-50">
+            Post your job free and get quotes from skilled artisans near you — or browse artisans and request a quote directly.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/post-job"
+              className="rounded-lg bg-white px-6 py-3 font-semibold text-brand-700 shadow hover:bg-brand-50"
+            >
+              📝 Post a Job
+            </Link>
+            <Link
+              href="/browse"
+              className="rounded-lg border border-white/60 px-6 py-3 font-semibold text-white hover:bg-white/10"
+            >
+              💬 Get a Quote
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="bg-white">
         <div className="container-page py-14">
