@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
 import { priceRange, timeAgo, isFeatured } from "@/lib/format";
 import Stars from "@/components/Stars";
 import ReviewForm from "@/components/ReviewForm";
 import JsonLd from "@/components/JsonLd";
 import ShareButtons from "@/components/ShareButtons";
+import LocationMapClient from "@/components/LocationMapClient";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -35,23 +35,19 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ArtisanProfilePage({ params }) {
-  const [artisan, viewer] = await Promise.all([
-    prisma.user.findUnique({
+  const artisan = await prisma.user.findUnique({
       where: { id: params.id },
       select: {
-        id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true, featuredUntil: true,
+        id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true, featuredUntil: true, latitude: true, longitude: true,
         services: { include: { category: true }, orderBy: { createdAt: "desc" } },
         reviewsGot: { include: { author: { select: { id: true, name: true } } }, orderBy: { createdAt: "desc" } },
       },
-    }),
-    getCurrentUser(),
-  ]);
+  });
 
   if (!artisan || artisan.role !== "ARTISAN") notFound();
 
   const ratings = artisan.reviewsGot.map((r) => r.rating);
   const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
-  const loggedIn = Boolean(viewer);
 
   const businessLd = {
     "@context": "https://schema.org",
@@ -64,6 +60,9 @@ export default async function ArtisanProfilePage({ params }) {
     address: artisan.city
       ? { "@type": "PostalAddress", addressLocality: artisan.city, addressCountry: "NG" }
       : undefined,
+    ...(artisan.latitude != null && artisan.longitude != null
+      ? { geo: { "@type": "GeoCoordinates", latitude: artisan.latitude, longitude: artisan.longitude } }
+      : {}),
     ...(ratings.length
       ? {
           aggregateRating: {
@@ -172,16 +171,21 @@ export default async function ArtisanProfilePage({ params }) {
           </div>
         </div>
 
-        {/* Right: contact */}
+        {/* Right: request quote, contact, location */}
         <div className="space-y-4">
+          {/* Request a quote */}
+          <div className="card p-5 text-center">
+            <Link href="/post-job" className="btn-primary w-full py-3 text-base">Request a quote</Link>
+            <p className="mt-2 text-xs text-gray-500">No commitment — get free quotes from artisans.</p>
+          </div>
+
+          {/* Contact details (open) */}
           <div className="card p-6">
             <h2 className="text-lg font-bold">Contact {artisan.name.split(" ")[0]}</h2>
-            {loggedIn ? (
-              <div className="mt-4 space-y-3">
-                {artisan.phone && (
+            <div className="mt-4 space-y-3">
+              {artisan.phone ? (
+                <>
                   <a href={`tel:${artisan.phone}`} className="btn-primary w-full">📞 Call {artisan.phone}</a>
-                )}
-                {artisan.phone && (
                   <a
                     href={`https://wa.me/234${artisan.phone.replace(/^0/, "")}`}
                     target="_blank"
@@ -190,25 +194,42 @@ export default async function ArtisanProfilePage({ params }) {
                   >
                     💬 WhatsApp
                   </a>
-                )}
-                {artisan.email && (
-                  <a href={`mailto:${artisan.email}`} className="btn-outline w-full">✉️ {artisan.email}</a>
-                )}
-              </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">No phone number provided yet.</p>
+              )}
+              {artisan.email && (
+                <a href={`mailto:${artisan.email}`} className="btn-outline w-full">✉️ {artisan.email}</a>
+              )}
+            </div>
+          </div>
+
+          {/* Location + map */}
+          <div className="card overflow-hidden p-0">
+            <div className="p-5 pb-3">
+              <h2 className="text-lg font-bold">Location</h2>
+              <p className="mt-1 text-sm text-gray-500">📍 {artisan.city || "Nigeria"}</p>
+            </div>
+            {artisan.latitude != null && artisan.longitude != null ? (
+              <>
+                <LocationMapClient lat={artisan.latitude} lng={artisan.longitude} title={artisan.name} subtitle={artisan.city} />
+                <div className="p-5 pt-4">
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${artisan.latitude},${artisan.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-outline w-full"
+                  >
+                    🧭 Get directions
+                  </a>
+                </div>
+              </>
             ) : (
-              <div className="mt-4">
-                <p className="text-sm text-gray-500">Log in to see contact details and reach this artisan.</p>
-                <Link href="/login" className="btn-primary mt-3 w-full">Log in to contact</Link>
-              </div>
+              <p className="px-5 pb-5 text-sm text-gray-400">This artisan hasn’t shared a map location yet.</p>
             )}
           </div>
 
-          <div className="card bg-brand-50 p-6">
-            <h3 className="font-semibold text-brand-800">Need something specific?</h3>
-            <p className="mt-1 text-sm text-brand-700">Post a job and get quotes from multiple artisans.</p>
-            <Link href="/post-job" className="btn-primary mt-3 w-full">Post a job</Link>
-          </div>
-
+          {/* Share */}
           <div className="card p-6">
             <ShareButtons
               url={`${SITE.url}/artisans/${artisan.id}`}
