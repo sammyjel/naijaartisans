@@ -41,9 +41,24 @@ model User {
   quotes       Quote[]
   reviewsGiven Review[]     @relation("ReviewAuthor")
   reviewsGot   Review[]     @relation("ReviewTarget")
+  payments     Payment[]
 
   referredBy User?  @relation("Referrals", fields: [referredById], references: [id])
   referrals  User[] @relation("Referrals")
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  reference String   @unique // Paystack transaction reference
+  plan      String // "featured" | "pro"
+  amount    Int // kobo
+  status    String   @default("success")
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
 }
 
 model Category {

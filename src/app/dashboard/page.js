@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import ShareButtons from "@/components/ShareButtons";
 import LocationUpdater from "@/components/LocationUpdater";
 import AvatarUploader from "@/components/AvatarUploader";
+import UpgradeCard from "@/components/UpgradeCard";
 import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
@@ -16,10 +17,17 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState([]);
   const [services, setServices] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [payMsg, setPayMsg] = useState("");
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [loading, user, router]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("payment") === "processing") {
+      setPayMsg("✅ Payment received! Your plan activates within a minute — refresh this page to see it.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -64,6 +72,17 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {payMsg && (
+        <div className="mt-4 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">{payMsg}</div>
+      )}
+
+      {/* Upgrade — automated Featured / Pro */}
+      {isArtisan && (
+        <section className="mt-6">
+          <UpgradeCard />
+        </section>
+      )}
 
       {/* Profile picture (optional) + location */}
       {isArtisan && (

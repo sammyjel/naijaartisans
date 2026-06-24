@@ -15,6 +15,7 @@ export const PLANS = [
     id: "featured",
     name: "Featured Listing",
     price: 2000,
+    days: 7,
     period: "per week",
     tagline: "Get seen first by customers searching in your city.",
     perks: [
@@ -32,6 +33,7 @@ export const PLANS = [
     id: "pro",
     name: "Artisan Pro",
     price: 5000,
+    days: 30,
     period: "per month",
     tagline: "Everything you need to win more jobs, every month.",
     perks: [

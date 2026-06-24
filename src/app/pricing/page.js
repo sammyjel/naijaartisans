@@ -1,6 +1,6 @@
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
-import { PLANS, ngn, planHref } from "@/lib/monetization";
+import { PLANS, ngn } from "@/lib/monetization";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
 export const metadata = {
@@ -70,14 +70,12 @@ export default function PricingPage() {
                 </li>
               ))}
             </ul>
-            <a
-              href={planHref(plan)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/dashboard"
               className={`mt-6 w-full text-center ${plan.highlight ? "btn-primary" : "btn-outline"}`}
             >
               {plan.cta}
-            </a>
+            </Link>
           </div>
         ))}
       </div>

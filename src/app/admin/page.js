@@ -49,6 +49,27 @@ export default async function AdminPage() {
   const fmtDate = (d) =>
     new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
   const referrers = topReferrers.filter((r) => r._count.referrals > 0);
+
+  // Revenue (guarded — Payment table may not exist before the migration).
+  let revenueKobo = 0;
+  let paymentCount = 0;
+  let recentPayments = [];
+  try {
+    const [agg, recent] = await Promise.all([
+      prisma.payment.aggregate({ _sum: { amount: true }, _count: true, where: { status: "success" } }),
+      prisma.payment.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: { user: { select: { name: true } } },
+      }),
+    ]);
+    revenueKobo = agg._sum.amount || 0;
+    paymentCount = agg._count || 0;
+    recentPayments = recent;
+  } catch {
+    /* Payment table not migrated yet */
+  }
+  const revenueNaira = Math.round(revenueKobo / 100);
   const mapMembers = users
     .filter((u) => u.latitude != null && u.longitude != null)
     .map((u) => ({ id: u.id, name: u.name, role: u.role, city: u.city, lat: u.latitude, lng: u.longitude }));
@@ -61,11 +82,12 @@ export default async function AdminPage() {
       </div>
 
       {/* Stats */}
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="Total members" value={total} />
         <Stat label="Artisans" value={artisans} accent="text-amber-600" />
         <Stat label="Customers" value={customers} accent="text-blue-600" />
         <Stat label="Joined this week" value={newThisWeek} accent="text-brand-600" />
+        <Stat label={`Revenue (${paymentCount} paid)`} value={`₦${revenueNaira.toLocaleString("en-NG")}`} accent="text-green-700" />
       </div>
 
       {/* Top referrers */}
@@ -88,6 +110,23 @@ export default async function AdminPage() {
           <h2 className="text-lg font-bold">Member map <span className="text-sm font-normal text-gray-500">({mapMembers.length} located)</span></h2>
           <div className="mt-3">
             <AdminMapClient members={mapMembers} />
+          </div>
+        </section>
+      )}
+
+      {/* Recent payments */}
+      {recentPayments.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-bold">Recent payments</h2>
+          <div className="mt-3 space-y-2">
+            {recentPayments.map((p) => (
+              <div key={p.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-2 text-sm">
+                <span className="font-medium">{p.user?.name || "—"}</span>
+                <span className="text-gray-500">{p.plan === "pro" ? "Artisan Pro" : "Featured"}</span>
+                <span className="font-semibold text-green-700">₦{Math.round((p.amount || 0) / 100).toLocaleString("en-NG")}</span>
+                <span className="text-gray-400">{fmtDate(p.createdAt)}</span>
+              </div>
+            ))}
           </div>
         </section>
       )}
