@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import BrowseFilters from "@/components/BrowseFilters";
 import JsonLd from "@/components/JsonLd";
 import AdSlot from "@/components/AdSlot";
+import NearMeButton from "@/components/NearMeButton";
 import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
+import { distanceKm, formatDistance } from "@/lib/geo";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -33,17 +35,28 @@ export async function generateMetadata({ searchParams }) {
 }
 
 export default async function BrowsePage({ searchParams }) {
-  const { category = "", city = "", q = "" } = searchParams;
+  const { category = "", city = "", q = "", lat = "", lng = "" } = searchParams;
+  const hasGeo = Boolean(lat && lng);
   const [categories, services] = await Promise.all([
     prisma.category.findMany({ orderBy: { name: "asc" } }),
     prisma.service.findMany({
       where: buildWhere({ category, city, q }),
       orderBy: { createdAt: "desc" },
-      include: { category: true, artisan: { select: { id: true, name: true, city: true, featuredUntil: true } } },
+      include: { category: true, artisan: { select: { id: true, name: true, city: true, featuredUntil: true, latitude: true, longitude: true } } },
     }),
   ]);
 
-  const ordered = featuredFirst(services);
+  // When "near me" is active, sort by distance; otherwise featured-first.
+  const ordered = hasGeo
+    ? services
+        .map((s) => ({ ...s, _dist: distanceKm(lat, lng, s.artisan.latitude, s.artisan.longitude) }))
+        .sort((a, b) => {
+          if (a._dist == null && b._dist == null) return 0;
+          if (a._dist == null) return 1;
+          if (b._dist == null) return -1;
+          return a._dist - b._dist;
+        })
+    : featuredFirst(services);
   const activeCategory = categories.find((c) => c.slug === category);
   const heading = activeCategory ? `${activeCategory.icon} ${activeCategory.name}` : "Find an artisan";
 
@@ -63,10 +76,14 @@ export default async function BrowsePage({ searchParams }) {
       <JsonLd data={breadcrumbLd([{ name: "Home", url: "/" }, { name: "Browse artisans", url: "/browse" }])} />
       <JsonLd data={itemListLd} />
 
-      <h1 className="text-2xl font-bold">
-        {heading}
-        {city ? <span className="text-gray-400"> in {city}</span> : null}
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">
+          {heading}
+          {city ? <span className="text-gray-400"> in {city}</span> : null}
+        </h1>
+        <NearMeButton baseParams={{ category, city, q }} active={hasGeo} />
+      </div>
+      {hasGeo && <p className="mt-2 text-sm text-brand-700">📍 Showing artisans nearest to your location first.</p>}
 
       <div className="mt-5">
         <BrowseFilters categories={categories} category={category} city={city} q={q} />
@@ -96,7 +113,10 @@ export default async function BrowsePage({ searchParams }) {
                   <h2 className="mt-3 font-semibold">{s.title}</h2>
                   <p className="mt-1 line-clamp-2 text-sm text-gray-500">{s.description}</p>
                   <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">
-                    <span className="text-gray-600">{s.artisan.name} · {s.city}</span>
+                    <span className="text-gray-600">
+                      {s.artisan.name} · {s.city}
+                      {s._dist != null && <span className="ml-1 font-medium text-brand-700">· 📍 {formatDistance(s._dist)}</span>}
+                    </span>
                     <span className="font-semibold text-brand-700">{priceRange(s.priceMin, s.priceMax)}</span>
                   </div>
                 </Link>

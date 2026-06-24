@@ -70,6 +70,8 @@ export async function getCurrentUser() {
       createdAt: true,
       featuredUntil: true,
       proUntil: true,
+      latitude: true,
+      longitude: true,
       _count: { select: { referrals: true } },
     },
   });

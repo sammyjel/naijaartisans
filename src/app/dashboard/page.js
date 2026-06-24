@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import ShareButtons from "@/components/ShareButtons";
+import LocationUpdater from "@/components/LocationUpdater";
 import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
@@ -62,6 +63,11 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Location — helps customers find you via "near me" */}
+      <section className="mt-6">
+        <LocationUpdater />
+      </section>
 
       {/* Artisan: invite & grow */}
       {isArtisan && (

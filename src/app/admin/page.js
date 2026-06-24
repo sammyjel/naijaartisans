@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/admin";
 import AdminLogin from "@/components/AdminLogin";
 import AdminLogout from "@/components/AdminLogout";
+import AdminMapClient from "@/components/AdminMapClient";
 import { isFeatured } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,9 @@ export default async function AdminPage() {
   const fmtDate = (d) =>
     new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
   const referrers = topReferrers.filter((r) => r._count.referrals > 0);
+  const mapMembers = users
+    .filter((u) => u.latitude != null && u.longitude != null)
+    .map((u) => ({ id: u.id, name: u.name, role: u.role, city: u.city, lat: u.latitude, lng: u.longitude }));
 
   return (
     <div className="container-page py-8">
@@ -74,6 +78,16 @@ export default async function AdminPage() {
                 {r.name} — {r._count.referrals} invited
               </span>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Map of located members */}
+      {mapMembers.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-bold">Member map <span className="text-sm font-normal text-gray-500">({mapMembers.length} located)</span></h2>
+          <div className="mt-3">
+            <AdminMapClient members={mapMembers} />
           </div>
         </section>
       )}
