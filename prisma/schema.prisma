@@ -32,6 +32,10 @@ model User {
   latitude  Float?
   longitude Float?
 
+  // Business hours (optional, "HH:MM" 24h)
+  openTime  String?
+  closeTime String?
+
   // Password reset (hashed token + expiry)
   resetTokenHash   String?
   resetTokenExpiry DateTime?

@@ -28,6 +28,28 @@ export function featuredFirst(services) {
   );
 }
 
+// "18:00" -> "6:00 PM"
+export function formatTime(hhmm) {
+  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
+  const [h, m] = hhmm.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hr = h % 12 || 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+// Open/closed status given opening hours, computed in Nigerian time (WAT, UTC+1).
+export function businessStatus(openTime, closeTime) {
+  if (!openTime || !closeTime) return null;
+  const watNow = new Date(Date.now() + 60 * 60 * 1000); // shift UTC -> WAT
+  const mins = watNow.getUTCHours() * 60 + watNow.getUTCMinutes();
+  const [oh, om] = openTime.split(":").map(Number);
+  const [ch, cm] = closeTime.split(":").map(Number);
+  const open = oh * 60 + om;
+  const close = ch * 60 + cm;
+  const isOpen = close > open ? mins >= open && mins < close : mins >= open || mins < close;
+  return { isOpen, openLabel: formatTime(openTime), closeLabel: formatTime(closeTime) };
+}
+
 export function timeAgo(date) {
   const d = new Date(date);
   const seconds = Math.floor((Date.now() - d.getTime()) / 1000);

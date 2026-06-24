@@ -5,7 +5,7 @@ import { hashPassword, setAuthCookie } from "@/lib/auth";
 export async function POST(request) {
   try {
     const body = await request.json();
-    let { name, email, phone, password, role, city, bio, ref, latitude, longitude } = body;
+    let { name, email, phone, password, role, city, bio, ref, latitude, longitude, openTime, closeTime } = body;
 
     name = (name || "").trim();
     email = (email || "").trim().toLowerCase() || null;
@@ -13,6 +13,11 @@ export async function POST(request) {
     city = (city || "").trim() || null;
     bio = (bio || "").trim() || null;
     role = role === "ARTISAN" ? "ARTISAN" : "CUSTOMER";
+
+    // Optional business hours ("HH:MM"); keep only valid values.
+    const timeRe = /^\d{1,2}:\d{2}$/;
+    openTime = timeRe.test((openTime || "").trim()) ? openTime.trim() : null;
+    closeTime = timeRe.test((closeTime || "").trim()) ? closeTime.trim() : null;
 
     // Validate optional geolocation (only store sensible coordinates).
     const lat = Number(latitude);
@@ -47,6 +52,8 @@ export async function POST(request) {
       data: {
         name, email, phone, password: await hashPassword(password), role, city, bio, referredById,
         ...(hasGeo ? { latitude: lat, longitude: lng } : {}),
+        ...(openTime ? { openTime } : {}),
+        ...(closeTime ? { closeTime } : {}),
       },
       select: { id: true, name: true, email: true, phone: true, role: true, city: true },
     });

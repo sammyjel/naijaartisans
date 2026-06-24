@@ -13,7 +13,7 @@ function RegisterForm() {
 
   const [role, setRole] = useState(params.get("role") === "artisan" ? "ARTISAN" : "CUSTOMER");
   const ref = params.get("ref") || "";
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", city: "", bio: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", city: "", bio: "", openTime: "", closeTime: "" });
   const [coords, setCoords] = useState(null); // { lat, lng }
   const [geoStatus, setGeoStatus] = useState(""); // "", "locating", "ok", "error"
   const [error, setError] = useState("");
@@ -144,16 +144,33 @@ function RegisterForm() {
           </div>
 
           {role === "ARTISAN" && (
-            <div>
-              <label className="label">Short bio <span className="text-gray-400">(what do you do?)</span></label>
-              <textarea
-                className="input"
-                rows={3}
-                value={form.bio}
-                onChange={(e) => update("bio", e.target.value)}
-                placeholder="e.g. Experienced plumber serving Lagos for 8 years."
-              />
-            </div>
+            <>
+              <div>
+                <label className="label">Short bio <span className="text-gray-400">(what do you do?)</span></label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={form.bio}
+                  onChange={(e) => update("bio", e.target.value)}
+                  placeholder="e.g. Experienced plumber serving Lagos for 8 years."
+                />
+              </div>
+
+              <div>
+                <label className="label">Working hours <span className="text-gray-400">(optional)</span></label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <span className="mb-1 block text-xs text-gray-400">Opens</span>
+                    <input type="time" className="input" value={form.openTime} onChange={(e) => update("openTime", e.target.value)} />
+                  </div>
+                  <div className="flex-1">
+                    <span className="mb-1 block text-xs text-gray-400">Closes</span>
+                    <input type="time" className="input" value={form.closeTime} onChange={(e) => update("closeTime", e.target.value)} />
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">Shown on your profile so customers know when you’re available. You can skip this.</p>
+              </div>
+            </>
           )}
 
           <div>
