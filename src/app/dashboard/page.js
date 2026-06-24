@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import ShareButtons from "@/components/ShareButtons";
 import LocationUpdater from "@/components/LocationUpdater";
+import AvatarUploader from "@/components/AvatarUploader";
 import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
@@ -63,6 +64,13 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Profile picture (optional) + location */}
+      {isArtisan && (
+        <section className="mt-6">
+          <AvatarUploader />
+        </section>
+      )}
 
       {/* Location — helps customers find you via "near me" */}
       <section className="mt-6">

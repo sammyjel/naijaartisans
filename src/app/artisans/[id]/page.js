@@ -38,7 +38,7 @@ export default async function ArtisanProfilePage({ params }) {
   const artisan = await prisma.user.findUnique({
       where: { id: params.id },
       select: {
-        id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true, featuredUntil: true, latitude: true, longitude: true,
+        id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true, featuredUntil: true, latitude: true, longitude: true, avatarUrl: true,
         services: { include: { category: true }, orderBy: { createdAt: "desc" } },
         reviewsGot: { include: { author: { select: { id: true, name: true } } }, orderBy: { createdAt: "desc" } },
       },
@@ -55,7 +55,7 @@ export default async function ArtisanProfilePage({ params }) {
     name: artisan.name,
     url: `${SITE.url}/artisans/${artisan.id}`,
     description: artisan.bio || undefined,
-    image: SITE.logo,
+    image: artisan.avatarUrl || SITE.logo,
     areaServed: artisan.city || "Nigeria",
     address: artisan.city
       ? { "@type": "PostalAddress", addressLocality: artisan.city, addressCountry: "NG" }
@@ -107,9 +107,14 @@ export default async function ArtisanProfilePage({ params }) {
         <div className="lg:col-span-2 space-y-6">
           <div className="card p-6">
             <div className="flex items-start gap-4">
-              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-brand-100 text-2xl font-bold text-brand-700">
-                {artisan.name.charAt(0)}
-              </div>
+              {artisan.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={artisan.avatarUrl} alt={artisan.name} className="h-16 w-16 shrink-0 rounded-full object-cover" />
+              ) : (
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-brand-100 text-2xl font-bold text-brand-700">
+                  {artisan.name.charAt(0)}
+                </div>
+              )}
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold">{artisan.name}</h1>
