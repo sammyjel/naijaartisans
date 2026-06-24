@@ -58,7 +58,12 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="label">Password</label>
+            <div className="flex items-center justify-between">
+              <label className="label">Password</label>
+              <Link href="/forgot-password" className="text-sm font-medium text-brand-700 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <input
               className="input"
               type="password"
@@ -76,12 +81,6 @@ export default function LoginPage() {
           New here?{" "}
           <Link href="/register" className="font-semibold text-brand-700 hover:underline">Create an account</Link>
         </p>
-
-        <div className="mt-6 rounded-lg bg-gray-50 p-3 text-xs text-gray-500">
-          <p className="font-semibold text-gray-600">Demo logins (password: password123)</p>
-          <p>Customer: customer@demo.com</p>
-          <p>Artisan: musa@demo.com</p>
-        </div>
       </div>
     </div>
   );

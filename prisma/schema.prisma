@@ -32,6 +32,10 @@ model User {
   latitude  Float?
   longitude Float?
 
+  // Password reset (hashed token + expiry)
+  resetTokenHash   String?
+  resetTokenExpiry DateTime?
+
   services     Service[]
   jobRequests  JobRequest[] @relation("CustomerJobs")
   quotes       Quote[]
