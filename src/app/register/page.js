@@ -14,8 +14,26 @@ function RegisterForm() {
   const [role, setRole] = useState(params.get("role") === "artisan" ? "ARTISAN" : "CUSTOMER");
   const ref = params.get("ref") || "";
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", city: "", bio: "" });
+  const [coords, setCoords] = useState(null); // { lat, lng }
+  const [geoStatus, setGeoStatus] = useState(""); // "", "locating", "ok", "error"
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setGeoStatus("error");
+      return;
+    }
+    setGeoStatus("locating");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoStatus("ok");
+      },
+      () => setGeoStatus("error"),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   function update(k, v) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -33,7 +51,7 @@ function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, role, ref }),
+        body: JSON.stringify({ ...form, role, ref, latitude: coords?.lat, longitude: coords?.lng }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -101,6 +119,28 @@ function RegisterForm() {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="label">Your location <span className="text-gray-400">(optional)</span></label>
+            <button
+              type="button"
+              onClick={useMyLocation}
+              className={`w-full ${geoStatus === "ok" ? "btn-primary" : "btn-outline"}`}
+            >
+              {geoStatus === "locating"
+                ? "Locating…"
+                : geoStatus === "ok"
+                ? "✓ Location captured"
+                : "📍 Use my current location"}
+            </button>
+            {geoStatus === "ok" && (
+              <p className="mt-1 text-xs text-brand-600">Got it — this helps customers find artisans near them.</p>
+            )}
+            {geoStatus === "error" && (
+              <p className="mt-1 text-xs text-gray-400">Couldn’t get your location — you can still continue without it.</p>
+            )}
+            <p className="mt-1 text-xs text-gray-400">Your browser will ask permission. Exact coordinates are private to the site owner.</p>
           </div>
 
           {role === "ARTISAN" && (

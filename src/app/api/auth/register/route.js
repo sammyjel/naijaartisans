@@ -5,7 +5,7 @@ import { hashPassword, setAuthCookie } from "@/lib/auth";
 export async function POST(request) {
   try {
     const body = await request.json();
-    let { name, email, phone, password, role, city, bio, ref } = body;
+    let { name, email, phone, password, role, city, bio, ref, latitude, longitude } = body;
 
     name = (name || "").trim();
     email = (email || "").trim().toLowerCase() || null;
@@ -13,6 +13,11 @@ export async function POST(request) {
     city = (city || "").trim() || null;
     bio = (bio || "").trim() || null;
     role = role === "ARTISAN" ? "ARTISAN" : "CUSTOMER";
+
+    // Validate optional geolocation (only store sensible coordinates).
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const hasGeo = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
     if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
     if (!email && !phone)
@@ -39,7 +44,10 @@ export async function POST(request) {
     }
 
     const user = await prisma.user.create({
-      data: { name, email, phone, password: await hashPassword(password), role, city, bio, referredById },
+      data: {
+        name, email, phone, password: await hashPassword(password), role, city, bio, referredById,
+        ...(hasGeo ? { latitude: lat, longitude: lng } : {}),
+      },
       select: { id: true, name: true, email: true, phone: true, role: true, city: true },
     });
 

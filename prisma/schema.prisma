@@ -28,6 +28,10 @@ model User {
   proUntil      DateTime? // active Pro subscription expiry
   referredById  String? // the artisan who invited this user
 
+  // Geolocation captured at signup (with the user's permission)
+  latitude  Float?
+  longitude Float?
+
   services     Service[]
   jobRequests  JobRequest[] @relation("CustomerJobs")
   quotes       Quote[]

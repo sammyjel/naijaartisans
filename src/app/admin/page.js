@@ -34,7 +34,7 @@ export default async function AdminPage() {
       take: 500,
       select: {
         id: true, name: true, role: true, city: true, phone: true, email: true,
-        createdAt: true, featuredUntil: true,
+        createdAt: true, featuredUntil: true, latitude: true, longitude: true,
         _count: { select: { referrals: true } },
       },
     }),
@@ -90,6 +90,7 @@ export default async function AdminPage() {
                 <th className="px-3 py-2 font-semibold">City</th>
                 <th className="px-3 py-2 font-semibold">Phone</th>
                 <th className="px-3 py-2 font-semibold">Email</th>
+                <th className="px-3 py-2 font-semibold">Location</th>
                 <th className="px-3 py-2 font-semibold">Invited</th>
                 <th className="px-3 py-2 font-semibold">Joined</th>
               </tr>
@@ -111,13 +112,27 @@ export default async function AdminPage() {
                     {u.phone ? <a href={`tel:${u.phone}`} className="text-brand-700 hover:underline">{u.phone}</a> : "—"}
                   </td>
                   <td className="px-3 py-2 text-gray-600">{u.email || "—"}</td>
+                  <td className="px-3 py-2">
+                    {u.latitude != null && u.longitude != null ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${u.latitude},${u.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-brand-700 hover:underline"
+                      >
+                        📍 View
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-gray-600">{u._count.referrals || "—"}</td>
                   <td className="px-3 py-2 text-gray-500">{fmtDate(u.createdAt)}</td>
                 </tr>
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-gray-500">No members yet.</td>
+                  <td colSpan={8} className="px-3 py-8 text-center text-gray-500">No members yet.</td>
                 </tr>
               )}
             </tbody>
