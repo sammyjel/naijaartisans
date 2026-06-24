@@ -7,7 +7,9 @@ export async function POST(request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "You must be logged in." }, { status: 401 });
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  // The Blob store is usable if either an explicit token or the connected
+  // store id is present (Vercel injects the token at runtime when connected).
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) {
     return NextResponse.json({ error: "Photo uploads aren't enabled yet." }, { status: 503 });
   }
 
