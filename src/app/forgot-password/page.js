@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
         {state === "notconfigured" && (
           <div className="mt-5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Password reset by email isn&apos;t available yet. Please contact support at{" "}
-            <a href="mailto:sammyjel.ng@gmail.com" className="font-semibold underline">sammyjel.ng@gmail.com</a>{" "}
+            <a href="mailto:support@naijaartisans.com" className="font-semibold underline">support@naijaartisans.com</a>{" "}
             and we&apos;ll help you.
           </div>
         )}

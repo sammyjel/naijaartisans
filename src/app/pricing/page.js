@@ -87,7 +87,7 @@ export default function PricingPage() {
             Create a free profile
           </Link>{" "}
           first, then come back to promote it. Need help choosing?{" "}
-          <a href="mailto:sammyjel.ng@gmail.com" className="font-semibold text-brand-700 hover:underline">
+          <a href="mailto:support@naijaartisans.com" className="font-semibold text-brand-700 hover:underline">
             Contact us
           </a>.
         </p>

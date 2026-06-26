@@ -8,7 +8,7 @@
 // 💡 Change the prices below to whatever you want — they're just defaults.
 
 export const CONTACT_WHATSAPP = "2348030000000"; // TODO: your WhatsApp number (intl format, no +)
-export const CONTACT_EMAIL = "sammyjel.ng@gmail.com";
+export const CONTACT_EMAIL = "support@naijaartisans.com";
 
 export const PLANS = [
   {

@@ -64,26 +64,61 @@ export default function RootLayout({ children }) {
           <Navbar />
           <main className="min-h-[calc(100vh-4rem)]">{children}</main>
           <footer className="mt-16 border-t border-gray-200 bg-white">
-            <div className="container-page py-8 text-sm text-gray-500">
-              <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p>© {new Date().getFullYear()} NaijaArtisans. Made for Nigeria 🇳🇬</p>
-                <div className="flex flex-wrap items-center justify-center gap-4">
-                  <Link href="/browse" className="hover:text-brand-700">Find Artisans</Link>
-                  <Link href="/jobs" className="hover:text-brand-700">Job Board</Link>
-                  <Link href="/join" className="hover:text-brand-700">For Artisans</Link>
-                  <Link href="/pricing" className="hover:text-brand-700">Pricing</Link>
-                  <Link href="/about" className="hover:text-brand-700">About</Link>
-                  <a href="mailto:sammyjel.ng@gmail.com" className="font-medium text-brand-700 hover:underline">
-                    Support: sammyjel.ng@gmail.com
-                  </a>
+            <div className="container-page py-10 text-sm text-gray-500">
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <div className="flex items-center gap-2 text-base font-extrabold text-brand-700">
+                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-600 text-white">N</span>
+                    NaijaArtisans
+                  </div>
+                  <p className="mt-3 max-w-xs text-gray-500">
+                    Find trusted artisans near you — plumbers, electricians, tailors, carpenters and
+                    more, across all 36 states &amp; FCT. 🇳🇬
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">Explore</p>
+                  <ul className="mt-3 space-y-2">
+                    <li><Link href="/browse" className="hover:text-brand-700">Find Artisans</Link></li>
+                    <li><Link href="/jobs" className="hover:text-brand-700">Job Board</Link></li>
+                    <li><Link href="/join" className="hover:text-brand-700">For Artisans</Link></li>
+                    <li><Link href="/pricing" className="hover:text-brand-700">Pricing</Link></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">Company</p>
+                  <ul className="mt-3 space-y-2">
+                    <li><Link href="/about" className="hover:text-brand-700">About</Link></li>
+                    <li><Link href="/help" className="hover:text-brand-700">Help &amp; FAQ</Link></li>
+                    <li><Link href="/terms" className="hover:text-brand-700">Terms of Service</Link></li>
+                    <li><Link href="/privacy" className="hover:text-brand-700">Privacy Policy</Link></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">Connect</p>
+                  <ul className="mt-3 space-y-2">
+                    <li>
+                      <a href="mailto:support@naijaartisans.com" className="font-medium text-brand-700 hover:underline">
+                        support@naijaartisans.com
+                      </a>
+                    </li>
+                  </ul>
+                  <div className="mt-3 flex items-center gap-3">
+                    <a href="https://facebook.com/naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-brand-700">Facebook</a>
+                    <a href="https://instagram.com/naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-brand-700">Instagram</a>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <a href="https://x.com/naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="hover:text-brand-700">X</a>
+                    <a href="https://tiktok.com/@naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-brand-700">TikTok</a>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 border-t border-gray-100 pt-4 text-center text-xs text-gray-400">
-                Built by{" "}
-                <a href="https://github.com/sammyjel/naijaartisans" target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 hover:underline">
-                  Sammy
-                </a>{" "}
-                · A full-stack portfolio project (Next.js · Prisma · PostgreSQL)
+
+              <div className="mt-8 border-t border-gray-100 pt-5 text-center text-xs text-gray-400">
+                © {new Date().getFullYear()} NaijaArtisans. All rights reserved. Made for Nigeria 🇳🇬
               </div>
             </div>
           </footer>

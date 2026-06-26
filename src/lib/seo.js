@@ -11,7 +11,7 @@ export const SITE = {
   url: SITE_URL,
   description:
     "NaijaArtisans is a service marketplace that connects skilled Nigerian artisans — plumbers, electricians, tailors, caterers, mechanics and more — with customers who need their services.",
-  email: "sammyjel.ng@gmail.com",
+  email: "support@naijaartisans.com",
   logo: `${SITE_URL}/images/hero.jpg`,
 };
 
