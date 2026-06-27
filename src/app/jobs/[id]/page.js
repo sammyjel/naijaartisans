@@ -1,93 +1,81 @@
-"use client";
-
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/components/AuthProvider";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import ShareButtons from "@/components/ShareButtons";
 import ReviewForm from "@/components/ReviewForm";
+import JobStatusToggle from "@/components/JobStatusToggle";
+import JobQuotePanel from "@/components/JobQuotePanel";
+import JsonLd from "@/components/JsonLd";
 import { naira, timeAgo } from "@/lib/format";
-import { SITE } from "@/lib/seo";
+import { SITE, breadcrumbLd } from "@/lib/seo";
 
-export default function JobDetailPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+export const dynamic = "force-dynamic";
 
-  const [job, setJob] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+export async function generateMetadata({ params }) {
+  const job = await prisma.jobRequest.findUnique({
+    where: { id: params.id },
+    select: { title: true, city: true, description: true, category: { select: { name: true } } },
+  });
+  if (!job) return { title: "Job not found" };
+  const title = `${job.title} — ${job.category.name} job in ${job.city}`;
+  const description = (job.description || `Open ${job.category.name.toLowerCase()} job in ${job.city}. Send a quote on NaijaArtisans.`).slice(0, 160);
+  return {
+    title,
+    description,
+    alternates: { canonical: `/jobs/${params.id}` },
+    openGraph: { title: `${title} | NaijaArtisans`, description, type: "article" },
+  };
+}
 
-  // quote form
-  const [message, setMessage] = useState("");
-  const [price, setPrice] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+export default async function JobDetailPage({ params }) {
+  const [user, job] = await Promise.all([
+    getCurrentUser(),
+    prisma.jobRequest.findUnique({
+      where: { id: params.id },
+      include: {
+        category: true,
+        customer: { select: { id: true, name: true, city: true } },
+        quotes: {
+          orderBy: { createdAt: "desc" },
+          include: { artisan: { select: { id: true, name: true, city: true, phone: true, email: true } } },
+        },
+      },
+    }),
+  ]);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    fetch(`/api/jobs/${id}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then((d) => {
-        setJob(d.job);
-        setIsOwner(d.isOwner);
-      })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
-  }, [id]);
+  if (!job) notFound();
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const isOwner = user?.id === job.customerId;
+  const quotedArtisanIds = job.quotes.map((q) => q.artisan.id);
 
-  async function sendQuote(e) {
-    e.preventDefault();
-    setError("");
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/jobs/${id}/quotes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, price }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Could not send quote.");
-        return;
-      }
-      setMessage("");
-      setPrice("");
-      load();
-    } catch {
-      setError("Network error.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function setStatus(status) {
-    await fetch(`/api/jobs/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    load();
-  }
-
-  if (loading || authLoading) return <div className="container-page py-12 text-center text-gray-500">Loading…</div>;
-  if (notFound || !job)
-    return (
-      <div className="container-page py-12 text-center">
-        <p className="text-lg font-semibold">Job not found</p>
-        <Link href="/jobs" className="btn-primary mt-4">Back to job board</Link>
-      </div>
-    );
-
-  const alreadyQuoted = user && job.quotes.some((q) => q.artisan.id === user.id);
+  const jobLd = {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: job.title,
+    description: job.description,
+    datePosted: new Date(job.createdAt).toISOString(),
+    employmentType: "CONTRACTOR",
+    hiringOrganization: { "@type": "Organization", name: "NaijaArtisans", sameAs: SITE.url },
+    jobLocation: {
+      "@type": "Place",
+      address: { "@type": "PostalAddress", addressLocality: job.city, addressCountry: "NG" },
+    },
+    ...(job.budget
+      ? { baseSalary: { "@type": "MonetaryAmount", currency: "NGN", value: { "@type": "QuantitativeValue", value: job.budget } } }
+      : {}),
+  };
 
   return (
     <div className="container-page py-8">
+      <JsonLd data={jobLd} />
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", url: "/" },
+          { name: "Job board", url: "/jobs" },
+          { name: job.title, url: `/jobs/${job.id}` },
+        ])}
+      />
       <Link href="/jobs" className="text-sm text-gray-500 hover:text-brand-700">← Back to job board</Link>
 
       <div className="mt-4 grid gap-6 lg:grid-cols-3">
@@ -109,15 +97,7 @@ export default function JobDetailPage() {
             </div>
             <p className="mt-4 whitespace-pre-wrap text-gray-700">{job.description}</p>
 
-            {isOwner && (
-              <div className="mt-5 flex gap-2 border-t border-gray-100 pt-4">
-                {job.status === "OPEN" ? (
-                  <button onClick={() => setStatus("CLOSED")} className="btn-outline">Mark as closed</button>
-                ) : (
-                  <button onClick={() => setStatus("OPEN")} className="btn-outline">Reopen job</button>
-                )}
-              </div>
-            )}
+            {isOwner && <JobStatusToggle jobId={job.id} status={job.status} />}
           </div>
 
           {/* Quotes */}
@@ -132,7 +112,7 @@ export default function JobDetailPage() {
             )}
             <div className="mt-4 space-y-4">
               {job.quotes.length === 0 ? (
-                <p className="text-gray-500">No quotes yet.</p>
+                <p className="text-gray-500">No quotes yet. Be the first artisan to respond!</p>
               ) : (
                 job.quotes.map((q) => (
                   <div key={q.id} className="rounded-lg border border-gray-100 p-4">
@@ -169,49 +149,16 @@ export default function JobDetailPage() {
 
         {/* Right: action panel */}
         <div className="space-y-4">
-          <div className="card p-6">
-            <h2 className="text-lg font-bold">Send a quote</h2>
-            {!user ? (
-              <div className="mt-3">
-                <p className="text-sm text-gray-500">Log in as an artisan to send a quote.</p>
-                <Link href="/login" className="btn-primary mt-3 w-full">Log in</Link>
-              </div>
-            ) : isOwner ? (
-              <p className="mt-3 text-sm text-gray-500">This is your job posting. You'll see quotes here as artisans respond.</p>
-            ) : user.role !== "ARTISAN" ? (
-              <p className="mt-3 text-sm text-gray-500">Only artisans can send quotes. Register as an artisan to bid on jobs.</p>
-            ) : job.status !== "OPEN" ? (
-              <p className="mt-3 text-sm text-gray-500">This job is closed.</p>
-            ) : alreadyQuoted ? (
-              <p className="mt-3 text-sm font-medium text-brand-700">✓ You've already sent a quote for this job.</p>
-            ) : (
-              <form onSubmit={sendQuote} className="mt-3 space-y-3">
-                {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-                <div>
-                  <label className="label">Your price <span className="text-gray-400">(₦, optional)</span></label>
-                  <input className="input" type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 12000" />
-                </div>
-                <div>
-                  <label className="label">Message</label>
-                  <textarea
-                    className="input"
-                    rows={4}
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Introduce yourself and how you'll handle the job."
-                    required
-                  />
-                </div>
-                <button className="btn-primary w-full" disabled={submitting}>
-                  {submitting ? "Sending…" : "Send quote"}
-                </button>
-              </form>
-            )}
-          </div>
+          <JobQuotePanel
+            jobId={job.id}
+            status={job.status}
+            customerId={job.customerId}
+            quotedArtisanIds={quotedArtisanIds}
+          />
 
           <div className="card p-6">
             <ShareButtons
-              url={`${SITE.url}/jobs/${id}`}
+              url={`${SITE.url}/jobs/${job.id}`}
               title={`${job.title} — ${job.category.name} job in ${job.city}`}
               label="Know an artisan for this job? Share 👇"
             />

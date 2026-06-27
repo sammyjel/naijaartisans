@@ -88,7 +88,7 @@ export default async function HomePage() {
               Plumbers, electricians, tailors, caterers and more. Post a job for free and get quotes from skilled hands around you.
             </p>
             <div className="mt-8 max-w-xl">
-              <SearchBar />
+              <SearchBar categories={categories.map((c) => ({ slug: c.slug, name: c.name }))} />
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
               <Link href="/post-job" className="rounded-lg bg-white px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
@@ -104,7 +104,7 @@ export default async function HomePage() {
 
       {/* Popular services with photos */}
       <section className="container-page py-12">
-        <h2 className="text-2xl font-bold">Popular services this week</h2>
+        <h2 className="text-2xl font-bold">Popular services</h2>
         <p className="mt-1 text-gray-500">Tap a service to see artisans near you.</p>
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
           {POPULAR.map((p) => (
