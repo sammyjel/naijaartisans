@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import ShareButtons from "@/components/ShareButtons";
 import LocationUpdater from "@/components/LocationUpdater";
 import AvatarUploader from "@/components/AvatarUploader";
+import PortfolioUploader from "@/components/PortfolioUploader";
 import UpgradeCard from "@/components/UpgradeCard";
 import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
@@ -88,6 +89,13 @@ export default function DashboardPage() {
       {isArtisan && (
         <section className="mt-6">
           <AvatarUploader />
+        </section>
+      )}
+
+      {/* Work photos / portfolio (optional) */}
+      {isArtisan && (
+        <section className="mt-6">
+          <PortfolioUploader />
         </section>
       )}
 

@@ -46,6 +46,16 @@ export default async function ArtisanProfilePage({ params }) {
 
   if (!artisan || artisan.role !== "ARTISAN") notFound();
 
+  // Work gallery — read defensively so the profile still renders if the
+  // galleryUrls column hasn't been migrated yet.
+  let galleryUrls = [];
+  try {
+    const g = await prisma.user.findUnique({ where: { id: artisan.id }, select: { galleryUrls: true } });
+    galleryUrls = g?.galleryUrls || [];
+  } catch {
+    galleryUrls = [];
+  }
+
   const ratings = artisan.reviewsGot.map((r) => r.rating);
   const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
   const hours = businessStatus(artisan.openTime, artisan.closeTime);
@@ -56,7 +66,7 @@ export default async function ArtisanProfilePage({ params }) {
     name: artisan.name,
     url: `${SITE.url}/artisans/${artisan.id}`,
     description: artisan.bio || undefined,
-    image: artisan.avatarUrl || SITE.logo,
+    image: galleryUrls.length ? galleryUrls : artisan.avatarUrl || SITE.logo,
     areaServed: artisan.city || "Nigeria",
     address: artisan.city
       ? { "@type": "PostalAddress", addressLocality: artisan.city, addressCountry: "NG" }
@@ -137,6 +147,33 @@ export default async function ArtisanProfilePage({ params }) {
             </div>
             {artisan.bio && <p className="mt-4 text-gray-700">{artisan.bio}</p>}
           </div>
+
+          {/* Work gallery */}
+          {galleryUrls.length > 0 && (
+            <div className="card p-6">
+              <h2 className="text-lg font-bold">Work gallery</h2>
+              <p className="mt-1 text-sm text-gray-500">Recent jobs by {artisan.name.split(" ")[0]}.</p>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {galleryUrls.map((url, i) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="aspect-square overflow-hidden rounded-lg border border-gray-100"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={`${artisan.name} work sample ${i + 1}`}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition hover:scale-105"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="card p-6">
             <h2 className="text-lg font-bold">Services offered</h2>
