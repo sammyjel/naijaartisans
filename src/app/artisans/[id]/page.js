@@ -224,9 +224,18 @@ export default async function ArtisanProfilePage({ params }) {
 
         {/* Right: request quote, contact, location */}
         <div className="space-y-4">
-          {/* Request a quote */}
+          {/* Request a quote — carries the artisan's context into the job form */}
           <div className="card p-5 text-center">
-            <Link href="/post-job" className="btn-primary w-full py-3 text-base">Request a quote</Link>
+            <Link
+              href={`/post-job?${new URLSearchParams({
+                name: artisan.name,
+                ...(artisan.services[0]?.category ? { category: artisan.services[0].category.name } : {}),
+                ...(artisan.city ? { city: artisan.city } : {}),
+              }).toString()}`}
+              className="btn-primary w-full py-3 text-base"
+            >
+              Request a quote
+            </Link>
             <p className="mt-2 text-xs text-gray-500">No commitment — get free quotes from artisans.</p>
           </div>
 
@@ -255,30 +264,26 @@ export default async function ArtisanProfilePage({ params }) {
             </div>
           </div>
 
-          {/* Location + map */}
-          <div className="card overflow-hidden p-0">
-            <div className="p-5 pb-3">
-              <h2 className="text-lg font-bold">Location</h2>
-              <p className="mt-1 text-sm text-gray-500">📍 {artisan.city || "Nigeria"}</p>
+          {/* Location + map — only shown when the artisan has shared coordinates */}
+          {artisan.latitude != null && artisan.longitude != null && (
+            <div className="card overflow-hidden p-0">
+              <div className="p-5 pb-3">
+                <h2 className="text-lg font-bold">Location</h2>
+                <p className="mt-1 text-sm text-gray-500">📍 {artisan.city || "Nigeria"}</p>
+              </div>
+              <LocationMapClient lat={artisan.latitude} lng={artisan.longitude} title={artisan.name} subtitle={artisan.city} />
+              <div className="p-5 pt-4">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${artisan.latitude},${artisan.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-outline w-full"
+                >
+                  🧭 Get directions
+                </a>
+              </div>
             </div>
-            {artisan.latitude != null && artisan.longitude != null ? (
-              <>
-                <LocationMapClient lat={artisan.latitude} lng={artisan.longitude} title={artisan.name} subtitle={artisan.city} />
-                <div className="p-5 pt-4">
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${artisan.latitude},${artisan.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-outline w-full"
-                  >
-                    🧭 Get directions
-                  </a>
-                </div>
-              </>
-            ) : (
-              <p className="px-5 pb-5 text-sm text-gray-400">This artisan hasn’t shared a map location yet.</p>
-            )}
-          </div>
+          )}
 
           {/* Share */}
           <div className="card p-6">

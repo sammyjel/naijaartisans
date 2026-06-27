@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useAuth } from "./AuthProvider";
 
 export default function Navbar() {
-  const { user, loading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -30,17 +30,16 @@ export default function Navbar() {
           <Link href="/jobs" className="btn-ghost">Job Board</Link>
           <Link href="/pricing" className="btn-ghost">Pricing</Link>
           <Link href="/help" className="btn-ghost">Help</Link>
-          {!loading && !user && (
-            <>
-              <Link href="/login" className="btn-outline ml-2">Log in</Link>
-              <Link href="/register" className="btn-primary">Sign up</Link>
-            </>
-          )}
-          {!loading && user && (
+          {user ? (
             <>
               <Link href="/dashboard" className="btn-ghost">Dashboard</Link>
               <span className="ml-2 hidden text-sm text-gray-500 lg:inline">Hi, {user.name.split(" ")[0]}</span>
               <button onClick={handleLogout} className="btn-outline ml-1">Log out</button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="btn-outline ml-2">Log in</Link>
+              <Link href="/register" className="btn-primary">Sign up</Link>
             </>
           )}
         </div>
@@ -58,16 +57,15 @@ export default function Navbar() {
             <Link href="/jobs" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Job Board</Link>
             <Link href="/pricing" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Pricing</Link>
             <Link href="/help" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Help</Link>
-            {!loading && !user && (
-              <>
-                <Link href="/login" className="btn-outline justify-start" onClick={() => setOpen(false)}>Log in</Link>
-                <Link href="/register" className="btn-primary justify-start" onClick={() => setOpen(false)}>Sign up</Link>
-              </>
-            )}
-            {!loading && user && (
+            {user ? (
               <>
                 <Link href="/dashboard" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Dashboard</Link>
                 <button onClick={handleLogout} className="btn-outline justify-start">Log out</button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="btn-outline justify-start" onClick={() => setOpen(false)}>Log in</Link>
+                <Link href="/register" className="btn-primary justify-start" onClick={() => setOpen(false)}>Sign up</Link>
               </>
             )}
           </div>
