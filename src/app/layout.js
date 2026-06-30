@@ -26,7 +26,15 @@ export const metadata = {
   applicationName: "NaijaArtisans",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "NaijaArtisans" },
-  icons: { apple: "/icons/apple-touch-icon.png" },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icons/apple-touch-icon.png",
+  },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
