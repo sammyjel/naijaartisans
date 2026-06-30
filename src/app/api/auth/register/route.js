@@ -5,7 +5,7 @@ import { hashPassword, setAuthCookie } from "@/lib/auth";
 export async function POST(request) {
   try {
     const body = await request.json();
-    let { name, email, phone, password, role, city, bio, ref, latitude, longitude, openTime, closeTime } = body;
+    let { name, email, phone, password, role, city, bio, ref, latitude, longitude, openTime, closeTime, categoryId } = body;
 
     name = (name || "").trim();
     email = (email || "").trim().toLowerCase() || null;
@@ -57,6 +57,30 @@ export async function POST(request) {
       },
       select: { id: true, name: true, email: true, phone: true, role: true, city: true },
     });
+
+    // If an artisan picked a trade, create a starter listing so they show up on
+    // "Find Artisans" immediately (they can edit prices/details later).
+    if (user.role === "ARTISAN") {
+      const catId = (categoryId || "").trim();
+      if (catId) {
+        try {
+          const cat = await prisma.category.findUnique({ where: { id: catId }, select: { id: true, name: true } });
+          if (cat) {
+            await prisma.service.create({
+              data: {
+                title: cat.name,
+                description: bio || `${cat.name} services${city ? ` in ${city}` : " in Nigeria"}.`,
+                city: city || "Nigeria",
+                categoryId: cat.id,
+                artisanId: user.id,
+              },
+            });
+          }
+        } catch (e) {
+          console.error("starter service creation failed", e); // never block signup
+        }
+      }
+    }
 
     // Reward the referrer with extra Featured time (extend from now or their current expiry).
     if (referredById) {

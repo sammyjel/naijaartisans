@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { CITIES } from "@/lib/constants";
 
@@ -13,7 +13,8 @@ function RegisterForm() {
 
   const [role, setRole] = useState(params.get("role") === "artisan" ? "ARTISAN" : "CUSTOMER");
   const ref = params.get("ref") || "";
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", city: "", bio: "", openTime: "", closeTime: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", city: "", bio: "", openTime: "", closeTime: "", categoryId: "" });
+  const [categories, setCategories] = useState([]);
   const [coords, setCoords] = useState(null); // { lat, lng }
   const [geoStatus, setGeoStatus] = useState(""); // "", "locating", "ok", "error"
   const [error, setError] = useState("");
@@ -35,6 +36,13 @@ function RegisterForm() {
     );
   }
 
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((d) => setCategories(d.categories || []))
+      .catch(() => {});
+  }, []);
+
   function update(k, v) {
     setForm((f) => ({ ...f, [k]: v }));
   }
@@ -44,6 +52,10 @@ function RegisterForm() {
     setError("");
     if (!form.email && !form.phone) {
       setError("Enter an email or a phone number.");
+      return;
+    }
+    if (role === "ARTISAN" && !form.categoryId) {
+      setError("Please choose your trade so customers can find you.");
       return;
     }
     setLoading(true);
@@ -145,6 +157,22 @@ function RegisterForm() {
 
           {role === "ARTISAN" && (
             <>
+              <div>
+                <label className="label">Your trade / profession</label>
+                <select
+                  className="input"
+                  value={form.categoryId}
+                  onChange={(e) => update("categoryId", e.target.value)}
+                  required
+                >
+                  <option value="">Select your trade</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-400">This is how customers find you. You can add more services later.</p>
+              </div>
+
               <div>
                 <label className="label">Short bio <span className="text-gray-400">(what do you do?)</span></label>
                 <textarea
