@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { Analytics } from "@vercel/analytics/react";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { organizationLd, websiteLd, SITE_URL } from "@/lib/seo";
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
@@ -23,6 +24,9 @@ export const metadata = {
     "post a job Nigeria", "skilled workers Nigeria",
   ],
   applicationName: "NaijaArtisans",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "NaijaArtisans" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
@@ -43,6 +47,10 @@ export const metadata = {
   robots: { index: true, follow: true },
   // Google Search Console verification code goes here once added:
   // verification: { google: "YOUR_CODE" },
+};
+
+export const viewport = {
+  themeColor: "#039855",
 };
 
 export default function RootLayout({ children }) {
@@ -123,6 +131,7 @@ export default function RootLayout({ children }) {
             </div>
           </footer>
         </AuthProvider>
+        <ServiceWorkerRegister />
         <Analytics />
       </body>
     </html>

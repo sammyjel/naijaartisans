@@ -1,0 +1,24 @@
+{
+  "name": "NaijaArtisans — Find trusted artisans in Nigeria",
+  "short_name": "NaijaArtisans",
+  "description": "Find and hire trusted artisans near you across Nigeria — plumbers, electricians, tailors, carpenters and more. Post a job free and get quotes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#039855",
+  "lang": "en-NG",
+  "dir": "ltr",
+  "categories": ["business", "shopping", "lifestyle"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Find Artisans", "url": "/browse" },
+    { "name": "Post a Job", "url": "/post-job" },
+    { "name": "For Artisans", "url": "/join" }
+  ]
+}
