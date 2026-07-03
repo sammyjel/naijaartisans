@@ -4,8 +4,34 @@ import JsonLd from "@/components/JsonLd";
 import ShareButtons from "@/components/ShareButtons";
 import { getGuide, allGuides, GUIDE_AUTHOR } from "@/lib/guides";
 import { SITE, breadcrumbLd } from "@/lib/seo";
+import { citySlug } from "@/lib/constants";
 
 const PUBLISHED_ISO = "2026-06-15";
+
+// Map a guide's display trade to its category slug, so each article can link
+// straight to the matching "money" service page (great for internal SEO).
+const TRADE_SLUG = {
+  "Plumbing": "plumbing",
+  "Electrical": "electrical",
+  "AC & Refrigeration": "ac-refrigeration",
+  "Tailoring & Fashion": "tailoring",
+  "Generator Repair": "generator-repair",
+  "Painting": "painting",
+  "Auto Mechanic": "auto-mechanic",
+  "Cleaning": "cleaning",
+  "Catering & Cooking": "catering",
+  "POP & Ceiling": "pop-ceiling",
+  "Solar & Inverter Installation": "solar-inverter",
+  "CCTV & Security Systems": "cctv-security",
+};
+
+function moneyLinkFor(guide) {
+  const slug = TRADE_SLUG[guide.trade];
+  if (!slug) return null;
+  const href = guide.city ? `/services/${slug}/${citySlug(guide.city)}` : `/services/${slug}`;
+  const where = guide.city ? ` in ${guide.city}` : "";
+  return { href, label: `Find ${guide.trade.toLowerCase()}${where}` };
+}
 
 export function generateStaticParams() {
   return allGuides().map((g) => ({ slug: g.slug }));
@@ -71,6 +97,7 @@ export default function GuidePage({ params }) {
   if (!guide) notFound();
 
   const others = allGuides().filter((g) => g.slug !== guide.slug).slice(0, 3);
+  const money = moneyLinkFor(guide);
 
   const articleLd = {
     "@context": "https://schema.org",
@@ -121,7 +148,11 @@ export default function GuidePage({ params }) {
           <p className="mt-1 text-sm text-brand-700">Post your job free and compare artisans near you by price and reviews.</p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Link href="/post-job" className="btn-primary px-6 py-3">📝 Post a job free</Link>
-            <Link href="/browse" className="btn-outline px-6 py-3">Browse artisans</Link>
+            {money ? (
+              <Link href={money.href} className="btn-outline px-6 py-3 capitalize">{money.label} →</Link>
+            ) : (
+              <Link href="/browse" className="btn-outline px-6 py-3">Browse artisans</Link>
+            )}
           </div>
         </div>
 
