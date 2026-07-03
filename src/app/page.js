@@ -218,6 +218,12 @@ export default async function HomePage() {
               💬 Get a Quote
             </Link>
           </div>
+          <p className="mt-5 text-sm text-brand-50">
+            First time hiring?{" "}
+            <Link href="/hiring-kit" className="font-semibold text-white underline hover:text-brand-100">
+              Grab the free No-Wahala Hiring Kit →
+            </Link>
+          </p>
         </div>
       </section>
 

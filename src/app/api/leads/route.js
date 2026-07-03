@@ -56,12 +56,13 @@ export async function POST(request) {
         `,
       }).catch(() => {});
 
-      // Welcome the lead by email if they gave one.
+      // Welcome the lead by email if they gave one (side-appropriate).
       if (email) {
+        const first = name.split(" ")[0];
         sendEmail({
           to: email,
-          subject: "You're in — welcome, Founding Artisan 🎉",
-          html: welcomeEmailHtml(name.split(" ")[0]),
+          subject: side === "ARTISAN" ? "You're in — welcome, Founding Artisan 🎉" : "📩 Your No-Wahala Hiring Kit",
+          html: side === "ARTISAN" ? welcomeEmailHtml(first) : hiringKitEmailHtml(first),
         }).catch(() => {});
       }
     }
@@ -101,6 +102,38 @@ function welcomeEmailHtml(firstName) {
           </a>
         </p>
         <p style="color:#666;font-size:13px">We'll also reach you on WhatsApp. See you inside! 🇳🇬</p>
+      </div>
+    </div>
+  `;
+}
+
+function hiringKitEmailHtml(firstName) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#111">
+      <div style="background:#039855;color:#fff;padding:24px;border-radius:12px 12px 0 0">
+        <h1 style="margin:0;font-size:22px">Your No-Wahala Hiring Kit 📩</h1>
+        <p style="margin:8px 0 0">Hi ${escapeHtml(firstName)} — hire any artisan with confidence.</p>
+      </div>
+      <div style="padding:24px;border:1px solid #eee;border-top:0;border-radius:0 0 12px 12px">
+        <p><strong>Before you pay anyone, ask:</strong></p>
+        <ol>
+          <li>Can I see photos of your past work or reviews?</li>
+          <li>What's your full price — including materials and call-out?</li>
+          <li>How long exactly will the job take?</li>
+          <li>Do you give any guarantee if something goes wrong?</li>
+          <li>Can you share a past customer as a reference?</li>
+          <li>Will you provide materials and give receipts?</li>
+          <li>What deposit do you need — with the balance on completion?</li>
+        </ol>
+        <p><strong>🚩 Walk away if</strong> they demand 100% upfront, have no reviews/references, or quote far below everyone else.</p>
+        <p style="margin-top:16px"><strong>The easy way:</strong> post your job free and get quotes from trusted, reviewed artisans near you.</p>
+        <p>
+          <a href="${SITE_URL}/post-job"
+             style="display:inline-block;background:#039855;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold">
+            Post my job free →
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px">Hire smart. No wahala. 🇳🇬</p>
       </div>
     </div>
   `;
