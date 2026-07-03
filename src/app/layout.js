@@ -98,6 +98,7 @@ export default function RootLayout({ children }) {
                   <ul className="mt-3 space-y-2">
                     <li><Link href="/browse" className="hover:text-brand-700">Find Artisans</Link></li>
                     <li><Link href="/jobs" className="hover:text-brand-700">Job Board</Link></li>
+                    <li><Link href="/guides" className="hover:text-brand-700">Guides</Link></li>
                     <li><Link href="/join" className="hover:text-brand-700">For Artisans</Link></li>
                     <li><Link href="/pricing" className="hover:text-brand-700">Pricing</Link></li>
                   </ul>
@@ -107,6 +108,7 @@ export default function RootLayout({ children }) {
                   <p className="font-semibold text-gray-900">Company</p>
                   <ul className="mt-3 space-y-2">
                     <li><Link href="/about" className="hover:text-brand-700">About</Link></li>
+                    <li><Link href="/contact" className="hover:text-brand-700">Contact</Link></li>
                     <li><Link href="/help" className="hover:text-brand-700">Help &amp; FAQ</Link></li>
                     <li><Link href="/terms" className="hover:text-brand-700">Terms of Service</Link></li>
                     <li><Link href="/privacy" className="hover:text-brand-700">Privacy Policy</Link></li>

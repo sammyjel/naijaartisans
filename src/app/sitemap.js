@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
 import { citySlug } from "@/lib/constants";
+import { allGuides } from "@/lib/guides";
 
 const BASE = SITE_URL;
 
@@ -8,10 +9,19 @@ const BASE = SITE_URL;
 export const dynamic = "force-dynamic";
 
 export default async function sitemap() {
-  const staticRoutes = ["", "/browse", "/jobs", "/services", "/pricing", "/join", "/about", "/register"].map((path) => ({
+  const staticRoutes = [
+    "", "/browse", "/jobs", "/services", "/guides", "/pricing", "/join",
+    "/about", "/contact", "/help", "/terms", "/privacy", "/register",
+  ].map((path) => ({
     url: `${BASE}${path}`,
     changeFrequency: path === "" ? "daily" : "weekly",
     priority: path === "" ? 1 : 0.7,
+  }));
+
+  const guideRoutes = allGuides().map((g) => ({
+    url: `${BASE}/guides/${g.slug}`,
+    changeFrequency: "monthly",
+    priority: 0.7,
   }));
 
   let dynamicRoutes = [];
@@ -50,5 +60,5 @@ export default async function sitemap() {
     // If the DB is unreachable, still return the static routes.
   }
 
-  return [...staticRoutes, ...dynamicRoutes];
+  return [...staticRoutes, ...guideRoutes, ...dynamicRoutes];
 }

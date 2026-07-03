@@ -5,6 +5,7 @@ import SearchBar from "@/components/SearchBar";
 import JsonLd from "@/components/JsonLd";
 import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { CITIES } from "@/lib/constants";
+import { allGuides } from "@/lib/guides";
 
 export const dynamic = "force-dynamic";
 
@@ -246,6 +247,27 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Helpful guides */}
+      <section className="container-page py-12">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Helpful hiring guides</h2>
+            <p className="mt-1 text-gray-500">Fair prices, the right questions, and how to hire with confidence.</p>
+          </div>
+          <Link href="/guides" className="text-sm font-semibold text-brand-700 hover:underline">All guides →</Link>
+        </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {allGuides().slice(0, 3).map((g) => (
+            <Link key={g.slug} href={`/guides/${g.slug}`} className="card p-5 transition hover:shadow-md">
+              <span className="badge">{g.trade}</span>
+              <h3 className="mt-2 font-semibold leading-snug">{g.title}</h3>
+              <p className="mt-1 line-clamp-2 text-sm text-gray-500">{g.description}</p>
+              <span className="mt-2 block text-xs text-gray-400">{g.readMins} min read</span>
+            </Link>
+          ))}
         </div>
       </section>
 

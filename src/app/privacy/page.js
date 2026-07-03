@@ -91,11 +91,37 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="7. Cookies &amp; analytics">
+        <Section title="7. Cookies, analytics &amp; advertising">
           <p className="text-gray-700">
-            We use essential cookies to keep you signed in and analytics to understand usage. If we
-            display ads (e.g. Google AdSense), third-party cookies may be used in line with their
-            policies.
+            We use essential cookies to keep you signed in, and analytics cookies to understand how the
+            site is used so we can improve it.
+          </p>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-gray-700">
+            <li>
+              <strong>Third-party advertising.</strong> We may use third-party advertising companies,
+              including <strong>Google</strong>, to serve ads when you visit NaijaArtisans. These
+              companies may use cookies and similar technologies to serve ads based on your prior visits
+              to this and other websites.
+            </li>
+            <li>
+              <strong>Google&apos;s advertising cookies.</strong> Google&apos;s use of advertising
+              cookies (including the DoubleClick DART cookie) enables it and its partners to serve ads
+              to you based on your visit to our site and/or other sites on the internet.
+            </li>
+            <li>
+              <strong>Your choices.</strong> You may opt out of personalised advertising by visiting{" "}
+              <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">Google Ads Settings</a>.
+              You can also opt out of some third-party vendors&apos; use of cookies at{" "}
+              <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">aboutads.info/choices</a>.
+            </li>
+            <li>
+              Learn more about how Google uses data from sites that use its services at{" "}
+              <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">policies.google.com/technologies/partner-sites</a>.
+            </li>
+          </ul>
+          <p className="mt-3 text-gray-700">
+            You can also manage or disable cookies in your browser settings at any time, though some
+            features of the site may not work as intended without them.
           </p>
         </Section>
 

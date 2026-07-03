@@ -28,6 +28,7 @@ export default function Navbar() {
           <Link href="/browse" className="btn-ghost">Find Artisans</Link>
           <Link href="/services" className="btn-ghost">Services</Link>
           <Link href="/jobs" className="btn-ghost">Job Board</Link>
+          <Link href="/guides" className="btn-ghost">Guides</Link>
           <Link href="/pricing" className="btn-ghost">Pricing</Link>
           <Link href="/help" className="btn-ghost">Help</Link>
           {user ? (
@@ -55,6 +56,7 @@ export default function Navbar() {
             <Link href="/browse" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Find Artisans</Link>
             <Link href="/services" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Services</Link>
             <Link href="/jobs" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Job Board</Link>
+            <Link href="/guides" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Guides</Link>
             <Link href="/pricing" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Pricing</Link>
             <Link href="/help" className="btn-ghost justify-start" onClick={() => setOpen(false)}>Help</Link>
             {user ? (
