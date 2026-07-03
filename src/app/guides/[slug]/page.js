@@ -23,6 +23,8 @@ const TRADE_SLUG = {
   "POP & Ceiling": "pop-ceiling",
   "Solar & Inverter Installation": "solar-inverter",
   "CCTV & Security Systems": "cctv-security",
+  "Carpentry": "carpentry",
+  "Borehole & Drilling": "borehole",
 };
 
 function moneyLinkFor(guide) {

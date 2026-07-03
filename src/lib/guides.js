@@ -415,6 +415,67 @@ export const GUIDES = [
       { type: "p", text: "Compare CCTV and security installers on NaijaArtisans by reviews and past work, and post your job free to get quotes in your city." },
     ],
   },
+  {
+    slug: "how-to-hire-a-carpenter-in-nigeria",
+    title: "How to Hire a Carpenter for Furniture in Nigeria (2026)",
+    description:
+      "Custom wardrobes, cabinets and TV stands — what carpentry costs in Nigeria, how to judge quality, and how to avoid furniture that falls apart.",
+    trade: "Carpentry",
+    updated: "June 2026",
+    readMins: 5,
+    body: [
+      { type: "p", text: "Custom furniture is one of the joys of furnishing a home in Nigeria — you get exactly what you want. But carpentry quality varies hugely, and the difference often hides inside the wood where you can't see it until a drawer sags or a door won't close." },
+      { type: "h2", text: "Rough carpentry prices (2026)" },
+      { type: "price", rows: [
+        ["TV stand / console", "₦40,000 – ₦150,000"],
+        ["Wardrobe (per unit)", "₦80,000 – ₦300,000"],
+        ["Kitchen cabinets (per run)", "₦150,000 – ₦600,000+"],
+        ["Bed frame", "₦60,000 – ₦250,000"],
+        ["Office / study desk", "₦40,000 – ₦150,000"],
+      ] },
+      { type: "h2", text: "How to judge quality before you pay" },
+      { type: "ul", items: [
+        "Ask what material is used — solid wood, MDF or particle board — and why.",
+        "Check the finishing: smooth edges, aligned doors, drawers that slide well.",
+        "Look at hinges and runners; cheap hardware fails first.",
+        "See photos of finished pieces, ideally ones a year or two old.",
+      ] },
+      { type: "tip", text: "Agree the material and hardware in writing. A quote that looks cheap often uses low-grade board and hinges that won't survive daily use — you pay twice when it fails." },
+      { type: "h2", text: "Find a carpenter near you" },
+      { type: "p", text: "Browse carpenters and furniture makers on NaijaArtisans, see their past work and reviews, and get quotes before you commission your piece." },
+    ],
+  },
+  {
+    slug: "borehole-drilling-cost-nigeria",
+    title: "Borehole Drilling Cost in Nigeria: What to Know Before You Dig (2026)",
+    description:
+      "Planning a borehole? Here's what drilling, casing and pump installation cost in Nigeria in 2026, and how to avoid a dry or poorly-built borehole.",
+    trade: "Borehole & Drilling",
+    updated: "June 2026",
+    readMins: 6,
+    body: [
+      { type: "p", text: "A borehole ends the daily struggle for water — but it's a serious investment, and a badly-drilled one can run dry, pump sand, or collapse. Because cost depends heavily on depth and geology, understanding the pieces helps you get a fair, honest quote." },
+      { type: "h2", text: "What drives the cost" },
+      { type: "p", text: "The main factors are how deep they must drill to reach clean water (which varies by area), the casing and screen quality, and the pump and storage you choose. A good driller does a survey first rather than guessing." },
+      { type: "price", rows: [
+        ["Drilling + casing (shallow water table)", "₦450,000 – ₦900,000"],
+        ["Drilling + casing (deep / rocky area)", "₦1,000,000 – ₦3,000,000+"],
+        ["Submersible pump + installation", "₦150,000 – ₦700,000"],
+        ["Overhead tank + stand", "₦150,000 – ₦600,000"],
+        ["Geological / water survey", "₦30,000 – ₦120,000"],
+      ] },
+      { type: "h2", text: "How to avoid a bad borehole" },
+      { type: "ul", items: [
+        "Insist on a survey before drilling — never let anyone drill 'by guess'.",
+        "Confirm the casing and screen type; cheap casing collapses over time.",
+        "Ask for a water test so you know it's safe to drink.",
+        "Get the drilling depth and materials stated clearly in the contract.",
+      ] },
+      { type: "tip", text: "Ask neighbours who recently drilled about their depth and driller. Local knowledge of the water table in your exact area is the best protection against a dry or overpriced borehole." },
+      { type: "h2", text: "Find a borehole driller near you" },
+      { type: "p", text: "Compare borehole and drilling contractors on NaijaArtisans by their reviews and past jobs, and get quotes before you commit to the dig." },
+    ],
+  },
 ];
 
 export function allGuides() {

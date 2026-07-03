@@ -56,6 +56,43 @@ export default function AboutPage() {
           ))}
         </ul>
 
+        {/* Who we are — E-E-A-T */}
+        <h2 className="mt-10 text-xl font-bold">Who's behind NaijaArtisans</h2>
+        <p className="mt-3 text-gray-600">
+          NaijaArtisans is built and run by a small founding team of Nigerians who know the problem
+          first-hand. We&apos;ve all been there — the plumber who never shows up, the "my guy" who
+          rushes the job, the fear of being overcharged because you don&apos;t know what a fair price
+          looks like. We built this platform to fix exactly that: a simple, trustworthy way to find
+          skilled hands near you, and a place where honest artisans can be found for their work.
+        </p>
+        <p className="mt-3 text-gray-600">
+          We&apos;re based in Nigeria and focused entirely on the Nigerian market — from Lagos to Kano,
+          Port Harcourt to Maiduguri, across all 36 states and the FCT. Everything we publish, from our{" "}
+          <Link href="/guides" className="text-brand-700 hover:underline">hiring guides</Link> to our
+          fair-price ranges, comes from real local knowledge of how these trades actually work here.
+        </p>
+
+        {/* Values */}
+        <h2 className="mt-10 text-xl font-bold">What we stand for</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="card p-5">
+            <h3 className="font-semibold">🤝 Trust &amp; safety</h3>
+            <p className="mt-1 text-sm text-gray-600">Real reviews and transparent profiles so you always know who you&apos;re hiring.</p>
+          </div>
+          <div className="card p-5">
+            <h3 className="font-semibold">💰 Fair, transparent pricing</h3>
+            <p className="mt-1 text-sm text-gray-600">We publish honest price ranges so no one gets overcharged or underpaid.</p>
+          </div>
+          <div className="card p-5">
+            <h3 className="font-semibold">🛠️ Supporting local artisans</h3>
+            <p className="mt-1 text-sm text-gray-600">Free profiles that help hardworking Nigerians grow their business online.</p>
+          </div>
+          <div className="card p-5">
+            <h3 className="font-semibold">🔒 Your privacy</h3>
+            <p className="mt-1 text-sm text-gray-600">We protect your data in line with the Nigeria Data Protection Act 2023.</p>
+          </div>
+        </div>
+
         <div className="card mt-10 bg-brand-50 p-6">
           <h2 className="text-lg font-bold text-brand-800">Join the community</h2>
           <p className="mt-2 text-sm text-brand-700">
