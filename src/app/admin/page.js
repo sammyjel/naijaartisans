@@ -69,6 +69,14 @@ export default async function AdminPage() {
   } catch {
     /* Payment table not migrated yet */
   }
+  // Marketing leads (guarded — Lead table may not exist before the migration).
+  let leads = [];
+  try {
+    leads = await prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
+  } catch {
+    /* Lead table not migrated yet */
+  }
+
   const revenueNaira = Math.round(revenueKobo / 100);
   const mapMembers = users
     .filter((u) => u.latitude != null && u.longitude != null)
@@ -89,6 +97,55 @@ export default async function AdminPage() {
         <Stat label="Joined this week" value={newThisWeek} accent="text-brand-600" />
         <Stat label={`Revenue (${paymentCount} paid)`} value={`₦${revenueNaira.toLocaleString("en-NG")}`} accent="text-green-700" />
       </div>
+
+      {/* Leads from the lead magnets */}
+      {leads.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-bold">Leads ({leads.length})</h2>
+          <p className="text-sm text-gray-500">Opt-ins from the lead magnets — follow up on WhatsApp fast.</p>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-gray-200">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-gray-500">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Name</th>
+                  <th className="px-3 py-2 font-semibold">WhatsApp</th>
+                  <th className="px-3 py-2 font-semibold">Trade</th>
+                  <th className="px-3 py-2 font-semibold">City</th>
+                  <th className="px-3 py-2 font-semibold">Side</th>
+                  <th className="px-3 py-2 font-semibold">Email</th>
+                  <th className="px-3 py-2 font-semibold">Captured</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {leads.map((l) => {
+                  const digits = (l.whatsapp || "").replace(/\D/g, "");
+                  return (
+                    <tr key={l.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-gray-900">{l.name}</td>
+                      <td className="px-3 py-2">
+                        {digits ? (
+                          <a href={`https://wa.me/${digits}`} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-700 hover:underline">
+                            💬 {l.whatsapp}
+                          </a>
+                        ) : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">{l.trade || "—"}</td>
+                      <td className="px-3 py-2 text-gray-600">{l.city || "—"}</td>
+                      <td className="px-3 py-2">
+                        <span className={l.side === "ARTISAN" ? "text-amber-700" : "text-blue-700"}>
+                          {l.side === "ARTISAN" ? "Artisan" : "Customer"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">{l.email || "—"}</td>
+                      <td className="px-3 py-2 text-gray-500">{fmtDate(l.createdAt)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Top referrers */}
       {referrers.length > 0 && (

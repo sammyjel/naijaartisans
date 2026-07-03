@@ -138,3 +138,20 @@ model Review {
   target   User   @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
   targetId String
 }
+
+// Marketing leads captured by the opt-in lead magnets (not full accounts yet).
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  whatsapp  String
+  email     String?
+  trade     String? // category / profession (free text for a lead)
+  city      String?
+  side      String   @default("ARTISAN") // ARTISAN | CUSTOMER
+  source    String? // where it was captured
+  magnet    String? // which lead magnet
+  createdAt DateTime @default(now())
+
+  @@index([side])
+  @@index([createdAt])
+}

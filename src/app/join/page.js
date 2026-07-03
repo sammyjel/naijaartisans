@@ -60,25 +60,29 @@ export default function JoinPage({ searchParams }) {
       {/* Hero */}
       <section className="bg-gradient-to-br from-brand-800 to-brand-600 text-white">
         <div className="container-page py-16 sm:py-20">
-          {ref && (
+          {ref ? (
             <div className="mb-5 inline-block rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium">
               🎉 A fellow artisan invited you — welcome!
             </div>
+          ) : (
+            <Link href="/founding-artisan" className="mb-5 inline-block rounded-full bg-amber-300 px-4 py-1.5 text-sm font-bold text-amber-900 hover:bg-amber-200">
+              🔥 First 100 artisans get 30 days Featured FREE — become a Founding Artisan →
+            </Link>
           )}
           <div className="max-w-2xl">
             <h1 className="text-4xl font-extrabold leading-tight sm:text-5xl">
               Get more jobs. Grow your business. 🛠️
             </h1>
             <p className="mt-4 text-lg text-brand-50">
-              Join thousands of customers looking for skilled artisans across Nigeria. List your
-              services free and get discovered by people near you — in under a minute.
+              Get discovered by customers looking for skilled artisans across Nigeria. List your
+              services free and reach people near you — in under a minute.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={registerHref} className="rounded-lg bg-white px-6 py-3 font-semibold text-brand-700 hover:bg-brand-50">
-                List my business — it’s free
+              <Link href="/founding-artisan" className="rounded-lg bg-white px-6 py-3 font-semibold text-brand-700 hover:bg-brand-50">
+                Get free job leads — it’s free
               </Link>
-              <Link href="/browse" className="rounded-lg border border-white/50 px-6 py-3 font-semibold text-white hover:bg-white/10">
-                See how it looks
+              <Link href={registerHref} className="rounded-lg border border-white/50 px-6 py-3 font-semibold text-white hover:bg-white/10">
+                List my business now
               </Link>
             </div>
           </div>
