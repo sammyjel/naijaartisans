@@ -40,7 +40,12 @@ RULES
 - For prices, give the range and note it varies; suggest [posting a job free](/post-job) for exact quotes.
 - Never invent specific artisans, names or phone numbers. Never guarantee outcomes.
 - Never ask for passwords, card details or OTPs. If asked, refuse and warn the user.
-- If a question is unrelated to NaijaArtisans, gently steer back to how you can help with hiring or joining.`;
+- If a question is unrelated to NaijaArtisans, gently steer back to how you can help with hiring or joining.
+
+LEAD CAPTURE
+- When the user seems READY TO HIRE (or asks to be contacted / wants a callback) and hasn't shared contact details, invite them to leave their WhatsApp and end your message with the exact token [[LEAD:customer]].
+- When the user is READY TO JOIN as an artisan, invite them to leave their WhatsApp and end your message with the exact token [[LEAD:artisan]].
+- Add at most ONE such token, only when it genuinely fits, and NEVER explain or mention the token itself.`;
 
 const MODEL = process.env.CHAT_MODEL || "claude-haiku-4-5-20251001";
 
@@ -51,9 +56,9 @@ function cannedReply(text) {
   if (q(["price", "cost", "how much", "charge", "rate"]))
     return "Prices vary by job, city and materials — our [hiring guides](/guides) have fair 2026 price ranges for common jobs. For an exact price, [post your job free](/post-job) and artisans near you will send quotes.";
   if (q(["post", "job", "quote", "hire", "need a", "looking for"]))
-    return "You can [post a job for free](/post-job) and get quotes from trusted artisans near you, or [browse artisans](/browse) and contact them directly.";
+    return "You can [post a job for free](/post-job) and get quotes from trusted artisans near you, or [browse artisans](/browse) and contact them directly. Want us to reach you on WhatsApp? [[LEAD:customer]]";
   if (q(["artisan", "join", "register", "sign up", "list", "work", "get customers", "get jobs"]))
-    return "Great! Listing your services is 100% free. Join as a [Founding Artisan](/founding-artisan) to get free job leads and 30 days of Featured placement, or [register here](/register?role=artisan).";
+    return "Great! Listing your services is 100% free. Join as a [Founding Artisan](/founding-artisan) to get free job leads and 30 days of Featured placement, or [register here](/register?role=artisan). Want us to reach you on WhatsApp? [[LEAD:artisan]]";
   if (q(["scam", "trust", "safe", "reliable", "avoid"]))
     return "Smart to check first! Grab our free [No-Wahala Hiring Kit](/hiring-kit) — the 7 questions to ask and red flags to avoid before paying any artisan.";
   if (q(["plumber", "electrician", "tailor", "carpenter", "mechanic", "ac", "painter", "cleaner", "cctv", "solar"]))

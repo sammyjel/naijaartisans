@@ -129,13 +129,12 @@ export default function RootLayout({ children }) {
                       </a>
                     </li>
                   </ul>
-                  <div className="mt-3 flex items-center gap-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
                     <a href="https://facebook.com/naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-brand-700">Facebook</a>
                     <a href="https://instagram.com/naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-brand-700">Instagram</a>
-                  </div>
-                  <div className="mt-2 flex items-center gap-3">
-                    <a href="https://x.com/naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="hover:text-brand-700">X</a>
+                    <a href="https://linkedin.com/company/naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="hover:text-brand-700">LinkedIn</a>
                     <a href="https://tiktok.com/@naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-brand-700">TikTok</a>
+                    <a href="https://youtube.com/@naijaartisans" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="hover:text-brand-700">YouTube</a>
                   </div>
                 </div>
               </div>

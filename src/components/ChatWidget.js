@@ -37,11 +37,59 @@ function renderText(text) {
   return parts;
 }
 
+// Inline WhatsApp capture shown when the assistant invites contact.
+function LeadInline({ side, onDone }) {
+  const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!name.trim()) return setErr("Please enter your name.");
+    if (whatsapp.replace(/\D/g, "").length < 7) return setErr("Enter a valid WhatsApp number.");
+    setErr("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, whatsapp, side, source: "chatbot", magnet: "chatbot" }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setErr(d.error || "Something went wrong. Try again.");
+        return;
+      }
+      onDone(name.trim().split(" ")[0]);
+    } catch {
+      setErr("Network error. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-brand-200 bg-brand-50 p-3">
+      <p className="text-sm font-semibold text-brand-800">📩 Leave your WhatsApp and we&apos;ll reach you</p>
+      <form onSubmit={submit} className="mt-2 space-y-2">
+        {err && <p className="text-xs text-red-600">{err}</p>}
+        <input className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-brand-400 focus:outline-none" placeholder="WhatsApp number" inputMode="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+        <button disabled={busy} className="w-full rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">
+          {busy ? "Sending…" : "Send my details"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", content: GREETING }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [capture, setCapture] = useState(null); // { side } when the bot invites a WhatsApp capture
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -63,7 +111,12 @@ export default function ChatWidget() {
         body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, content: m.content })) }),
       });
       const data = await res.json().catch(() => ({}));
-      setMessages((cur) => [...cur, { role: "assistant", content: data.reply || "Sorry, I couldn't answer that. Try [posting a job free](/post-job)." }]);
+      let reply = data.reply || "Sorry, I couldn't answer that. Try [posting a job free](/post-job).";
+      const mk = reply.match(/\[\[LEAD:(customer|artisan)\]\]/i);
+      let side = null;
+      if (mk) { side = mk[1].toUpperCase(); reply = reply.replace(mk[0], "").trim(); }
+      setMessages((cur) => [...cur, { role: "assistant", content: reply }]);
+      if (side) setCapture({ side });
     } catch {
       setMessages((cur) => [...cur, { role: "assistant", content: "Network hiccup 😅 — please try again, or [post a job free](/post-job)." }]);
     } finally {
@@ -113,6 +166,18 @@ export default function ChatWidget() {
                   typing…
                 </div>
               </div>
+            )}
+            {capture && !loading && (
+              <LeadInline
+                side={capture.side}
+                onDone={(first) => {
+                  setCapture(null);
+                  setMessages((cur) => [
+                    ...cur,
+                    { role: "assistant", content: `✅ Got it${first ? ", " + first : ""}! We'll reach you on WhatsApp shortly. Meanwhile, you can [post a job free](/post-job) or [browse artisans](/browse).` },
+                  ]);
+                }}
+              />
             )}
             {messages.length === 1 && !loading && (
               <div className="flex flex-wrap gap-2 pt-1">
