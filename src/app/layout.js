@@ -6,6 +6,7 @@ import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { Analytics } from "@vercel/analytics/react";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import ChatWidget from "@/components/ChatWidget";
 import { organizationLd, websiteLd, SITE_URL } from "@/lib/seo";
 
 const ADSENSE_CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
@@ -145,6 +146,7 @@ export default function RootLayout({ children }) {
             </div>
           </footer>
         </AuthProvider>
+        <ChatWidget />
         <ServiceWorkerRegister />
         <Analytics />
       </body>
