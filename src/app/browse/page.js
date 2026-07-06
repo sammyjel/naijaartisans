@@ -7,8 +7,16 @@ import NearMeButton from "@/components/NearMeButton";
 import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { distanceKm, formatDistance } from "@/lib/geo";
 import { SITE, breadcrumbLd } from "@/lib/seo";
+import { allGuides } from "@/lib/guides";
+import { CITIES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
+
+// Big hubs shown as quick city links (filtered to cities we actually cover).
+const TOP_CITIES = [
+  "Lagos", "Abuja", "Port Harcourt", "Ibadan", "Kano", "Benin City",
+  "Enugu", "Kaduna", "Owerri", "Uyo", "Calabar", "Warri",
+].filter((c) => CITIES.includes(c));
 
 function buildWhere({ category, city, q }) {
   const where = {};
@@ -59,6 +67,7 @@ export default async function BrowsePage({ searchParams }) {
     : featuredFirst(services);
   const activeCategory = categories.find((c) => c.slug === category);
   const heading = activeCategory ? `${activeCategory.icon} ${activeCategory.name}` : "Find an artisan";
+  const guides = allGuides();
 
   const itemListLd = {
     "@context": "https://schema.org",
@@ -84,6 +93,14 @@ export default async function BrowsePage({ searchParams }) {
         <NearMeButton baseParams={{ category, city, q }} active={hasGeo} />
       </div>
       {hasGeo && <p className="mt-2 text-sm text-brand-700">📍 Showing artisans nearest to your location first.</p>}
+
+      {!category && !city && !q && (
+        <p className="mt-2 max-w-2xl text-sm text-gray-600">
+          Find and hire trusted local artisans across all 36 states and the FCT — plumbers, electricians,
+          tailors, carpenters, AC technicians, caterers, cleaners and more. Compare profiles and prices,
+          contact them directly on WhatsApp, or post a job for free and let artisans come to you.
+        </p>
+      )}
 
       <div className="mt-5">
         <BrowseFilters categories={categories} category={category} city={city} q={q} />
@@ -125,6 +142,61 @@ export default async function BrowsePage({ searchParams }) {
           </>
         )}
       </div>
+
+      {/* Always-present hub content so /browse is a rich, indexable page even
+          before many artisans have joined. Also builds internal links. */}
+      <section className="mt-12 border-t border-gray-100 pt-10">
+        <h2 className="text-xl font-bold">Popular services</h2>
+        <p className="mt-1 text-sm text-gray-500">Tap a service to see artisans, or post a job and get free quotes.</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {categories.map((c) => (
+            <Link key={c.id} href={`/browse?category=${c.slug}`} className="badge hover:bg-brand-100">
+              {c.icon} {c.name}
+            </Link>
+          ))}
+        </div>
+
+        {TOP_CITIES.length > 0 && (
+          <>
+            <h2 className="mt-10 text-xl font-bold">Browse by city</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {TOP_CITIES.map((c) => (
+                <Link
+                  key={c}
+                  href={`/browse?city=${encodeURIComponent(c)}`}
+                  className="rounded-full border border-gray-200 px-3 py-1 text-sm text-gray-600 hover:border-brand-300 hover:text-brand-700"
+                >
+                  {c}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+
+        {guides.length > 0 && (
+          <>
+            <h2 className="mt-10 text-xl font-bold">Hiring guides &amp; fair 2026 prices</h2>
+            <p className="mt-1 text-sm text-gray-500">Know what a job should cost before you hire.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {guides.slice(0, 6).map((g) => (
+                <Link key={g.slug} href={`/guides/${g.slug}`} className="card p-4 transition hover:shadow-md">
+                  <p className="font-semibold text-brand-700">{g.title}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-gray-500">{g.description}</p>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="card mt-10 bg-brand-50 p-6 text-center">
+          <h2 className="text-lg font-bold text-brand-800">Can&apos;t find who you need?</h2>
+          <p className="mt-1 text-sm text-brand-700">Post your job for free and skilled artisans will send you quotes.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <Link href="/post-job" className="btn-primary">Post a job free</Link>
+            <Link href="/founding-artisan" className="btn-outline">List your services</Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
