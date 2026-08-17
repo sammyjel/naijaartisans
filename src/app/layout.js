@@ -141,6 +141,16 @@ export default function RootLayout({ children }) {
 
               <div className="mt-8 border-t border-gray-100 pt-5 text-center text-xs text-gray-400">
                 © {new Date().getFullYear()} NaijaArtisans. All rights reserved. Made for Nigeria 🇳🇬
+                <span className="mx-1.5">·</span>
+                Built by{" "}
+                <a
+                  href="https://samuel-ijeluola.netlify.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-brand-600 hover:underline"
+                >
+                  Samuel Ijeluola
+                </a>
               </div>
             </div>
           </footer>
