@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import Stars from "@/components/Stars";
 import BrowseFilters from "@/components/BrowseFilters";
 import JsonLd from "@/components/JsonLd";
 import AdSlot from "@/components/AdSlot";
@@ -9,7 +11,13 @@ import { distanceKm, formatDistance } from "@/lib/geo";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 import { allGuides } from "@/lib/guides";
 import { CITIES } from "@/lib/constants";
+import { reviewExcerptsByArtisan } from "@/lib/reviews";
 
+// STAYS DYNAMIC ON PURPOSE. This page reads searchParams (category, city, q, lat,
+// lng), which already opts it out of static rendering, so adding a `revalidate`
+// here would cache nothing and only look like a fix. The marketing pages that
+// genuinely can be cached (/, /services/**, /artisans/[id]) were moved to ISR
+// instead — see docs/LIQUIDITY-IMPLEMENTATION-PLAN.md.
 export const dynamic = "force-dynamic";
 
 // Big hubs shown as quick city links (filtered to cities we actually cover).
@@ -50,7 +58,19 @@ export default async function BrowsePage({ searchParams }) {
     prisma.service.findMany({
       where: buildWhere({ category, city, q }),
       orderBy: { createdAt: "desc" },
-      include: { category: true, artisan: { select: { id: true, name: true, city: true, featuredUntil: true, latitude: true, longitude: true } } },
+      include: {
+        category: true,
+        artisan: {
+          select: {
+            id: true, name: true, city: true, featuredUntil: true, latitude: true, longitude: true,
+            // Trust signals. ratingAverage and reviewCount are plain columns kept
+            // up to date on review write (src/lib/reviews.js), so putting a rating
+            // on all 60 cards costs zero extra queries — which is the entire
+            // reason they are denormalised rather than aggregated per card.
+            avatarUrl: true, ratingAverage: true, reviewCount: true,
+          },
+        },
+      },
     }),
   ]);
 
@@ -65,6 +85,11 @@ export default async function BrowsePage({ searchParams }) {
           return a._dist - b._dist;
         })
     : featuredFirst(services);
+  // One query for the whole page rather than one per card: every visible artisan
+  // id goes in, a Map comes back. The obvious implementation of "show a review on
+  // each card" is a findFirst inside the map() below, which would be 60 queries.
+  const excerpts = await reviewExcerptsByArtisan(ordered.map((s) => s.artisan.id));
+
   const activeCategory = categories.find((c) => c.slug === category);
   const heading = activeCategory ? `${activeCategory.icon} ${activeCategory.name}` : "Find an artisan";
   const guides = allGuides();
@@ -120,19 +145,69 @@ export default async function BrowsePage({ searchParams }) {
             <p className="mb-3 text-sm text-gray-500">{services.length} result{services.length === 1 ? "" : "s"}</p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {ordered.map((s) => (
-                <Link key={s.id} href={`/artisans/${s.artisan.id}`} className={`card p-5 transition hover:shadow-md ${isFeatured(s.artisan.featuredUntil) ? "ring-1 ring-amber-300" : ""}`}>
+                <Link key={s.id} href={`/artisans/${s.artisan.id}`} className={`card flex flex-col p-5 transition hover:shadow-md ${isFeatured(s.artisan.featuredUntil) ? "ring-1 ring-amber-300" : ""}`}>
                   <div className="flex items-center justify-between">
                     <span className="badge">{s.category.icon} {s.category.name}</span>
                     {isFeatured(s.artisan.featuredUntil) && (
                       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">⭐ Featured</span>
                     )}
                   </div>
-                  <h2 className="mt-3 font-semibold">{s.title}</h2>
+
+                  {/* Who it is, with a face and a rating. A directory selling
+                      "trusted" with no photo and no review was asking every
+                      visitor to take it purely on faith. */}
+                  <div className="mt-3 flex items-center gap-3">
+                    {s.artisan.avatarUrl ? (
+                      <Image
+                        src={s.artisan.avatarUrl}
+                        alt={s.artisan.name}
+                        width={44}
+                        height={44}
+                        sizes="44px"
+                        className="h-11 w-11 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-100 text-base font-bold text-brand-700"
+                      >
+                        {s.artisan.name.trim().charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{s.artisan.name}</span>
+                      {/* Stars shows "New · no reviews yet" when the average is
+                          null, so an unrated artisan never renders as 5.0 (0). */}
+                      <Stars
+                        value={s.artisan.ratingAverage || 0}
+                        count={s.artisan.reviewCount || undefined}
+                      />
+                    </span>
+                  </div>
+
+                  <h2 className="mt-3 text-sm font-semibold text-gray-800">{s.title}</h2>
                   <p className="mt-1 line-clamp-2 text-sm text-gray-500">{s.description}</p>
+
+                  {excerpts.get(s.artisan.id) && (
+                    <figure className="mt-3 border-l-2 border-brand-200 pl-3">
+                      <blockquote className="line-clamp-2 text-sm italic text-gray-600">
+                        “{excerpts.get(s.artisan.id).comment}”
+                      </blockquote>
+                      <figcaption className="mt-1 text-xs text-gray-400">
+                        — {excerpts.get(s.artisan.id).authorName}
+                        {excerpts.get(s.artisan.id).isDemo && (
+                          <span className="ml-1.5 rounded bg-gray-100 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-gray-500">
+                            Sample
+                          </span>
+                        )}
+                      </figcaption>
+                    </figure>
+                  )}
+
                   <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-sm">
                     <span className="text-gray-600">
-                      {s.artisan.name} · {s.city}
-                      {s._dist != null && <span className="ml-1 font-medium text-brand-700">· 📍 {formatDistance(s._dist)}</span>}
+                      📍 {s.city}
+                      {s._dist != null && <span className="ml-1 font-medium text-brand-700">· {formatDistance(s._dist)}</span>}
                     </span>
                     <span className="font-semibold text-brand-700">{priceRange(s.priceMin, s.priceMax)}</span>
                   </div>

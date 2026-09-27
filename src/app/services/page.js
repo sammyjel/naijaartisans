@@ -4,7 +4,12 @@ import JsonLd from "@/components/JsonLd";
 import { CITIES, citySlug } from "@/lib/constants";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// ISR. This page is public marketing content: no cookies, no headers(), no
+// per-user data, nothing that has to be true to the second. It was
+// force-dynamic, which is why production served Cache-Control: no-store and
+// missed the CDN on every request. An hour-old artisan list is fine here; a
+// 700ms origin round trip from Nigeria to us-east on every visit was not.
+export const revalidate = 3600;
 
 export async function generateMetadata() {
   return {

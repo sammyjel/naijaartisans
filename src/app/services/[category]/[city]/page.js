@@ -6,7 +6,44 @@ import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { cityFromSlug, citySlug } from "@/lib/constants";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// ISR. This page is public marketing content: no cookies, no headers(), no
+// per-user data, nothing that has to be true to the second. It was
+// force-dynamic, which is why production served Cache-Control: no-store and
+// missed the CDN on every request. An hour-old artisan list is fine here; a
+// 700ms origin round trip from Nigeria to us-east on every visit was not.
+export const revalidate = 3600;
+
+// generateStaticParams is REQUIRED here, not optional.
+//
+// `export const revalidate` on its own does NOT make a dynamic segment
+// cacheable: without this function the route is absent from
+// .next/prerender-manifest.json entirely and Next serves it as
+// f (Dynamic, server-rendered on demand) - verified by inspecting the manifest
+// after a build. Declaring the params is what registers the route for ISR.
+//
+// Params not returned here still work: dynamicParams defaults to true, so a
+// newly added city or artisan renders on first request and is then cached.
+//
+// The try/catch degrades deliberately. If the database is unreachable at build
+// time, returning [] means every page is generated on demand and cached on
+// first hit, rather than failing the deploy. Nothing incorrect gets cached,
+// because nothing is prerendered.
+export async function generateStaticParams() {
+  try {
+    // Only category+city pairs that actually have a listing. Generating all
+    // 50 categories x 37 cities would prerender ~1,850 mostly empty pages.
+    const pairs = await prisma.service.findMany({
+      distinct: ["categoryId", "city"],
+      select: { city: true, category: { select: { slug: true } } },
+    });
+    return pairs
+      .filter((p) => p.category && p.city)
+      .map((p) => ({ category: p.category.slug, city: citySlug(p.city) }));
+  } catch (e) {
+    console.error("[services/[category]/[city]] generateStaticParams failed, falling back to on-demand:", e);
+    return [];
+  }
+}
 
 async function load(categorySlug, citySlugParam) {
   const city = cityFromSlug(citySlugParam);

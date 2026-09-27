@@ -17,10 +17,33 @@ export async function GET(_request, { params }) {
   });
   if (!job) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-  // The customer who owns the job (and quoting artisans) can see contact details;
-  // we expose quotes to everyone but only reveal the owner flag.
   const isOwner = user?.id === job.customerId;
-  return NextResponse.json({ job, isOwner });
+
+  // SECURITY: strip contact details the caller is not entitled to.
+  //
+  // The intent was always "the customer who owns the job, and the artisans who
+  // quoted on it, can see contact details" — but the response returned the
+  // customer's phone and email, and every quoting artisan's, to anyone who
+  // asked. `isOwner` was only a flag, and a flag the client was trusted to
+  // honour is not an access control. Iterating job ids harvested the contact
+  // book of both sides of the marketplace.
+  const redactedCustomer = isOwner
+    ? job.customer
+    : { id: job.customer.id, name: job.customer.name, city: job.customer.city };
+
+  const quotes = job.quotes.map((q) => {
+    // An artisan always sees their own details; the job owner sees everyone who
+    // quoted, because contacting them is the point. Nobody else does.
+    const maySeeArtisan = isOwner || user?.id === q.artisanId;
+    return {
+      ...q,
+      artisan: maySeeArtisan
+        ? q.artisan
+        : { id: q.artisan.id, name: q.artisan.name, city: q.artisan.city },
+    };
+  });
+
+  return NextResponse.json({ job: { ...job, customer: redactedCustomer, quotes }, isOwner });
 }
 
 // Close / reopen a job (owner only)

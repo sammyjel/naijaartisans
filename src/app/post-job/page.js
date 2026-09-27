@@ -20,6 +20,10 @@ function PostJobForm() {
   const [form, setForm] = useState({ title: "", description: "", categoryId: "", city: "", budget: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // What actually happened when the job was posted: the job id plus how many
+  // artisans were really notified. Held in state so the confirmation can tell the
+  // truth instead of the usual "we have notified artisans near you".
+  const [posted, setPosted] = useState(null);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -63,7 +67,11 @@ function PostJobForm() {
         setError(data.error || "Could not post job.");
         return;
       }
-      router.push(`/jobs/${data.job.id}`);
+      setPosted({
+        jobId: data.job.id,
+        artisans: data.notified?.artisans ?? 0,
+        eligible: data.notified?.eligible ?? 0,
+      });
       router.refresh();
     } catch {
       setError("Network error.");
@@ -102,6 +110,37 @@ function PostJobForm() {
 
         {error && <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 
+        {posted ? (
+          <div className="mt-6">
+            <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+              <p className="text-lg font-bold text-green-900">Your job is live.</p>
+              {posted.artisans > 0 ? (
+                <p className="mt-1 text-sm text-green-800">
+                  We notified <strong>{posted.artisans}</strong> matching{" "}
+                  {posted.artisans === 1 ? "artisan" : "artisans"}. You will be notified here
+                  and by email as they respond.
+                </p>
+              ) : (
+                /* No promise is made when nothing was sent. An empty reassurance
+                   here is exactly how a customer ends up waiting for quotes that
+                   were never going to come. */
+                <p className="mt-1 text-sm text-green-800">
+                  We could not find a matching artisan in {form.city || "your city"} yet, so
+                  nobody has been alerted. Your job stays on the public job board, and we will
+                  notify you if a suitable artisan joins.
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href={`/jobs/${posted.jobId}`} className="btn-primary">
+                  View your job
+                </Link>
+                <Link href="/browse" className="btn-outline">
+                  Browse artisans yourself
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
             <label className="label">Job title</label>
@@ -159,6 +198,7 @@ function PostJobForm() {
             {submitting ? "Posting…" : "Post job"}
           </button>
         </form>
+        )}
       </div>
     </div>
   );

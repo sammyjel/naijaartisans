@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { validateImageUpload } from "@/lib/upload";
 
 export async function POST(request) {
   const user = await getCurrentUser();
@@ -15,21 +16,16 @@ export async function POST(request) {
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
-  if (!file || typeof file === "string") {
-    return NextResponse.json({ error: "No image provided." }, { status: 400 });
-  }
-  if (!file.type?.startsWith("image/")) {
-    return NextResponse.json({ error: "Please upload an image file." }, { status: 400 });
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: "Image is too large (max 5MB)." }, { status: 400 });
-  }
 
-  const ext = (file.name?.split(".").pop() || "jpg").toLowerCase();
+  // Allow-listed type, and the extension comes from our table rather than from
+  // the uploader's filename. See src/lib/upload.js.
+  const check = validateImageUpload(file);
+  if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status });
+
   try {
-    const blob = await put(`avatars/${user.id}.${ext}`, file, {
+    const blob = await put(`avatars/${user.id}.${check.ext}`, file, {
       access: "public",
-      contentType: file.type,
+      contentType: check.contentType,
       addRandomSuffix: true,
     });
     await prisma.user.update({ where: { id: user.id }, data: { avatarUrl: blob.url } });

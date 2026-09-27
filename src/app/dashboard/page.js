@@ -9,6 +9,7 @@ import LocationUpdater from "@/components/LocationUpdater";
 import AvatarUploader from "@/components/AvatarUploader";
 import PortfolioUploader from "@/components/PortfolioUploader";
 import UpgradeCard from "@/components/UpgradeCard";
+import NotificationsPanel from "@/components/NotificationsPanel";
 import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
@@ -77,6 +78,11 @@ export default function DashboardPage() {
       {payMsg && (
         <div className="mt-4 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">{payMsg}</div>
       )}
+
+      {/* First thing on the page deliberately: for an artisan this is where the
+          work is, and burying it under the upgrade card is how job alerts get
+          missed. */}
+      <NotificationsPanel role={user.role} />
 
       {/* Upgrade — automated Featured / Pro */}
       {isArtisan && (

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { validateImageUpload } from "@/lib/upload";
 
 const MAX_PHOTOS = 12;
 
@@ -45,21 +46,14 @@ export async function POST(request) {
 
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
-  if (!file || typeof file === "string") {
-    return NextResponse.json({ error: "No image provided." }, { status: 400 });
-  }
-  if (!file.type?.startsWith("image/")) {
-    return NextResponse.json({ error: "Please upload an image file." }, { status: 400 });
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: "Image is too large (max 5MB)." }, { status: 400 });
-  }
 
-  const ext = (file.name?.split(".").pop() || "jpg").toLowerCase();
+  const check = validateImageUpload(file);
+  if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status });
+
   try {
-    const blob = await put(`gallery/${user.id}/${Date.now()}.${ext}`, file, {
+    const blob = await put(`gallery/${user.id}/${Date.now()}.${check.ext}`, file, {
       access: "public",
-      contentType: file.type,
+      contentType: check.contentType,
       addRandomSuffix: true,
     });
     const next = [...urls, blob.url];
@@ -82,6 +76,17 @@ export async function DELETE(request) {
 
   const { urls, migrated } = await readGallery(user.id);
   if (!migrated) return NextResponse.json({ urls: [] });
+
+  // SECURITY: the caller must actually own this photo.
+  //
+  // Previously the url was filtered out of their own list (a no-op if it was
+  // never theirs) and then passed straight to del(). Because del() takes the
+  // raw url, any logged-in user could delete ANY blob in the store — another
+  // artisan's portfolio or avatar — just by posting its address. Ownership is
+  // now checked against the caller's own gallery before anything is removed.
+  if (!urls.includes(url)) {
+    return NextResponse.json({ error: "That photo is not in your gallery." }, { status: 403 });
+  }
 
   const next = urls.filter((u) => u !== url);
   try {

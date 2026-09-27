@@ -23,6 +23,19 @@ model User {
   avatarUrl String?
   galleryUrls String[] @default([]) // artisan work / portfolio photos
   createdAt DateTime @default(now())
+  /// Maintained by Prisma on every write. Exists so the sitemap can publish a
+  /// truthful <lastmod> for /artisans/<id> instead of inventing "now".
+  updatedAt DateTime @updatedAt @default(now())
+
+  /// Denormalised review aggregates, recomputed by recomputeArtisanRating() in
+  /// src/lib/reviews.js whenever a review is written. /browse renders one card per
+  /// service, so reading these as plain columns is what keeps that page free of a
+  /// per-artisan aggregate query.
+  ///
+  /// GENUINE REVIEWS ONLY — demo/seed reviews (Review.isDemo) are excluded, so a
+  /// seeded staging database can never show an inflated public rating.
+  ratingAverage Float?
+  reviewCount   Int    @default(0)
 
   // Monetization & growth
   featuredUntil DateTime? // artisan shows at the top with a badge while in the future
@@ -47,9 +60,17 @@ model User {
   reviewsGiven Review[]     @relation("ReviewAuthor")
   reviewsGot   Review[]     @relation("ReviewTarget")
   payments     Payment[]
+  /// Done-for-you orders placed by this user. Optional on the order side:
+  /// buying does not require an account.
+  serviceOrders ServiceOrder[] @relation("CustomerOrders")
+
+  notifications Notification[]
 
   referredBy User?  @relation("Referrals", fields: [referredById], references: [id])
   referrals  User[] @relation("Referrals")
+
+  /// Artisan matching filters on role + city on every job post.
+  @@index([role, city])
 }
 
 model Payment {
@@ -84,6 +105,8 @@ model Service {
   priceMax    Int?
   city        String
   createdAt   DateTime @default(now())
+  /// Source of <lastmod> for the /services/<category>/<city> money pages.
+  updatedAt   DateTime @updatedAt @default(now())
 
   artisan    User     @relation(fields: [artisanId], references: [id], onDelete: Cascade)
   artisanId  String
@@ -92,6 +115,9 @@ model Service {
 
   @@index([categoryId])
   @@index([city])
+  /// The /services/<category>/<city> query filters on both at once.
+  @@index([categoryId, city])
+  @@index([artisanId])
 }
 
 model JobRequest {
@@ -102,15 +128,22 @@ model JobRequest {
   budget      Int?
   status      String   @default("OPEN") // OPEN | CLOSED
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @default(now())
 
   customer   User     @relation("CustomerJobs", fields: [customerId], references: [id], onDelete: Cascade)
   customerId String
   category   Category @relation(fields: [categoryId], references: [id])
   categoryId String
   quotes     Quote[]
+  reviews    Review[]
+  notifications Notification[]
 
   @@index([categoryId])
   @@index([city])
+  /// Matching reads OPEN jobs by category+city; the board reads newest-first.
+  @@index([categoryId, city])
+  @@index([status, createdAt])
+  @@index([customerId])
 }
 
 model Quote {
@@ -133,10 +166,208 @@ model Review {
   comment   String?
   createdAt DateTime @default(now())
 
+  /// The job this review came out of. Nullable because rows written before review
+  /// eligibility existed have no job to point at; new reviews always set it.
+  /// SetNull rather than Cascade — deleting a job must not erase an artisan's record.
+  jobRequest   JobRequest? @relation(fields: [jobRequestId], references: [id], onDelete: SetNull)
+  jobRequestId String?
+
+  /// TRUE only for synthetic rows created by `npm run seed:demo`. Demo reviews are
+  /// excluded from ratingAverage/reviewCount and are labelled wherever they render,
+  /// so they can never be mistaken for genuine customer activity.
+  isDemo Boolean @default(false)
+
   author   User   @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   authorId String
   target   User   @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
   targetId String
+
+  /// One review per customer per artisan. This is the duplicate-prevention
+  /// guarantee; the API check in front of it is only there for a nicer error.
+  @@unique([authorId, targetId])
+  /// Every read is "newest reviews for this artisan".
+  @@index([targetId, createdAt])
+  @@index([jobRequestId])
+  @@index([authorId])
+}
+
+/// In-app notification, and the record of whether its email went out.
+///
+/// One table serves both channels deliberately: the in-app inbox and the email are
+/// the same event, and splitting them is how the two drift apart. Push/SMS can be
+/// added later as extra status columns without touching callers.
+model Notification {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  type  String // NEW_JOB_MATCH | NEW_QUOTE
+  title String
+  body  String
+  /// Deep link the artisan should land on, e.g. /jobs/<id>.
+  url   String
+
+  jobRequest   JobRequest? @relation(fields: [jobRequestId], references: [id], onDelete: Cascade)
+  jobRequestId String?
+
+  /// Idempotency key, e.g. "job:<jobId>:artisan:<userId>". A retried job POST
+  /// re-runs createMany({ skipDuplicates: true }), so this unique constraint —
+  /// not application logic — is what guarantees one notification per artisan per job.
+  dedupeKey String @unique
+
+  readAt DateTime?
+
+  /// Delivery is tracked per row so a Resend outage is visible and retryable
+  /// instead of silently swallowed.
+  emailStatus   String    @default("PENDING") // PENDING | SENT | FAILED | SKIPPED
+  emailAttempts Int       @default(0)
+  emailError    String?
+  emailSentAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@index([jobRequestId])
+  @@index([emailStatus, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DONE-FOR-YOU  —  NaijaArtisans sells the work, then has it delivered.
+//
+// This is a different business from the directory above. There, artisans pay us
+// to be found and the job money never touches the platform. Here WE are the
+// seller: the customer buys a fixed-price package from NaijaArtisans, we assign
+// someone to deliver it, and we keep the spread.
+//
+// The consequence is worth stating plainly, because it drives every field below:
+// once we take the money we own the outcome. So an order records what we charged
+// AND what we expect delivery to cost, who is doing it, and when it is due.
+//
+// All money is in KOBO, matching the existing Payment model. Fields are suffixed
+// `Kobo` so there is never a doubt.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ServicePackage {
+  id      String @id @default(cuid())
+  slug    String @unique
+  title   String
+  summary String // one line, used on the catalogue card
+  description String
+
+  /// Free-text rather than a Category relation: those categories drive the
+  /// artisan directory's navigation, and adding "Logo Design" to them would put
+  /// it in the plumbers-and-carpenters menu.
+  category String
+
+  /// DIGITAL ships as a file and can be checked from anywhere. PHYSICAL means
+  /// someone turns up at an address, which we cannot inspect remotely — kept in
+  /// the model so trades can be switched on later, but not sold yet.
+  kind String @default("DIGITAL") // DIGITAL | PHYSICAL
+
+  priceKobo  Int
+  /// Share of the price taken before work starts.
+  depositPct Int @default(50)
+  /// What we expect to pay the deliverer. Never rendered publicly.
+  costKobo   Int
+
+  turnaroundDays Int
+  revisions      Int      @default(2)
+  deliverables   String[] @default([]) // what the customer receives
+  requirements   String[] @default([]) // what we need from them to start
+
+  /// Nothing is sellable until switched on deliberately.
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  orders ServiceOrder[]
+
+  @@index([kind, isActive])
+}
+
+model ServiceOrder {
+  id        String @id @default(cuid())
+  /// Short human code the customer quotes in emails, e.g. NA-2609-4F2A.
+  reference String @unique
+
+  package   ServicePackage @relation(fields: [packageId], references: [id])
+  packageId String
+
+  /// Buying does not require an account — a checkout that demands registration
+  /// loses the sale.
+  customer      User?   @relation("CustomerOrders", fields: [customerId], references: [id])
+  customerId    String?
+  customerName  String
+  customerEmail String
+  customerPhone String?
+
+  /// The customer's answers to the package's `requirements`, stored as JSON so a
+  /// package can change its questions without a migration.
+  briefJson String @default("{}")
+
+  // AWAITING_DEPOSIT | IN_PROGRESS | DELIVERED | AWAITING_BALANCE | COMPLETED
+  //                  | CANCELLED | REFUNDED
+  status String @default("AWAITING_DEPOSIT")
+
+  /// Snapshotted at purchase. A later price change must never alter what someone
+  /// already agreed to pay.
+  priceKobo   Int
+  depositKobo Int
+  balanceKobo Int
+  costKobo    Int
+
+  // ── fulfilment ────────────────────────────────────────────────────────────
+  fulfillerType     String? // PLATFORM_ARTISAN | EXTERNAL
+  fulfillerUserId   String? // set when a registered artisan is doing it
+  fulfillerName     String?
+  fulfillerNote     String?
+  /// What we actually agreed to pay, which may differ from the package estimate.
+  fulfillerCostKobo Int?
+  fulfillerPaidAt   DateTime?
+
+  dueAt       DateTime?
+  deliveredAt DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  payments   ServicePayment[]
+  deliveries Delivery[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Kept separate from `Payment` so subscription revenue and order revenue never
+/// have to be untangled in a report.
+model ServicePayment {
+  id        String @id @default(cuid())
+  reference String @unique // Paystack transaction reference
+
+  order   ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+
+  kind       String // DEPOSIT | BALANCE
+  amountKobo Int
+  feeKobo    Int      @default(0)
+  status     String   @default("PENDING") // PENDING | PAID | FAILED
+  paidAt     DateTime?
+  rawJson    String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model Delivery {
+  id        String   @id @default(cuid())
+  order     ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  note      String?
+  fileUrls  String[] @default([])
+  /// False until the customer accepts it; a revision request flips it back.
+  accepted  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
 }
 
 // Marketing leads captured by the opt-in lead magnets (not full accounts yet).

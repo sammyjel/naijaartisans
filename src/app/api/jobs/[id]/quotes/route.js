@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { notifyCustomerOfQuote } from "@/lib/notifications";
+import { track } from "@/lib/metrics";
 
 // POST /api/jobs/[id]/quotes - an artisan sends a quote on a job request
 export async function POST(request, { params }) {
@@ -26,6 +28,13 @@ export async function POST(request, { params }) {
       data: { message, price, jobRequestId: job.id, artisanId: user.id },
       include: { artisan: { select: { id: true, name: true, city: true } } },
     });
+
+    track("quote_submitted", { jobId: job.id, quoteId: quote.id, artisanId: user.id, hasPrice: Boolean(price) });
+
+    // Close the loop back to the customer. Idempotent on the quote id, and it
+    // never throws - a quote that saved must not 500 because an email bounced.
+    await notifyCustomerOfQuote(quote, job, quote.artisan);
+
     return NextResponse.json({ quote }, { status: 201 });
   } catch (err) {
     // unique constraint -> already quoted

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { notifyArtisansOfJob } from "@/lib/notifications";
+import { track } from "@/lib/metrics";
 
 // GET /api/jobs?category=plumbing&city=Lagos&mine=1
 export async function GET(request) {
@@ -55,5 +57,30 @@ export async function POST(request) {
     include: { category: true },
   });
 
-  return NextResponse.json({ job }, { status: 201 });
+  track("job_posted", { jobId: job.id, categoryId, city, hasBudget: Boolean(budget) });
+
+  // Notify matching artisans. Deliberately AFTER the create above and outside any
+  // transaction: a notification must never go out for a job that failed to save.
+  //
+  // It is also deliberately awaited. On Vercel, work left running after the
+  // response has been returned can be killed when the function suspends, so a
+  // fire-and-forget here would silently drop exactly the emails this release
+  // exists to send. notifyArtisansOfJob is bounded (at most 15 recipients, sent
+  // in batches of 4) and never throws, so the cost is a slightly slower POST
+  // rather than a failed one. A real queue is the right next step.
+  const delivery = await notifyArtisansOfJob(job);
+
+  // Returned so the client can tell the customer what actually happened instead
+  // of promising notifications that were never created.
+  return NextResponse.json(
+    {
+      job,
+      notified: {
+        artisans: delivery.created,
+        eligible: delivery.eligible,
+        emailed: delivery.emailed,
+      },
+    },
+    { status: 201 }
+  );
 }
