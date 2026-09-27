@@ -28,17 +28,27 @@ function Get-Probe($url) {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $r = Invoke-WebRequest -Uri $url -Method Get -MaximumRedirection 5 -SkipHttpErrorCheck -TimeoutSec 30
     $sw.Stop()
+
+    # Vercel Deployment Protection serves its SSO login page with HTTP *200*, not
+    # 401. Without this check every URL looks like a healthy cached page and the
+    # whole run silently measures Vercel's login screen instead of the site -
+    # which is exactly what happened on 2026-09-27 and produced a false PASS.
+    $isAuthWall = ($r.Content -match '<title>\s*Login\s*.\s*Vercel\s*</title>') -or
+                  ($r.Content -match 'Authentication Required') -or
+                  ($r.Headers['x-matched-path'] -join ',') -eq '/login' -and $url -notmatch '/login$'
+
     return [pscustomobject]@{
-      Ok     = $true
-      Status = [int]$r.StatusCode
-      Cache  = ($r.Headers['x-vercel-cache'] -join ',')
-      CC     = ($r.Headers['cache-control']  -join ',')
-      Ms     = $sw.ElapsedMilliseconds
-      Err    = ''
+      Ok       = $true
+      Status   = [int]$r.StatusCode
+      Cache    = ($r.Headers['x-vercel-cache'] -join ',')
+      CC       = ($r.Headers['cache-control']  -join ',')
+      Ms       = $sw.ElapsedMilliseconds
+      AuthWall = $isAuthWall
+      Err      = ''
     }
   } catch {
     return [pscustomobject]@{
-      Ok = $false; Status = 0; Cache = ''; CC = ''; Ms = 0; Err = $_.Exception.Message
+      Ok = $false; Status = 0; Cache = ''; CC = ''; Ms = 0; AuthWall = $false; Err = $_.Exception.Message
     }
   }
 }
@@ -57,10 +67,20 @@ if (-not $probe.Ok) {
   Write-Host "  https://naijaartisans-git-liquidity-release-<scope>.vercel.app" -ForegroundColor Yellow
   exit 1
 }
+if ($probe.AuthWall) {
+  Write-Host ""
+  Write-Host "VERCEL DEPLOYMENT PROTECTION IS ON - every result would be its login page." -ForegroundColor Red
+  Write-Host "  It answers HTTP 200, so this is not visible from the status code alone." -ForegroundColor DarkGray
+  Write-Host ""
+  Write-Host "Fix one of these, then re-run:" -ForegroundColor Yellow
+  Write-Host "  - Vercel > Project > Settings > Deployment Protection > disable for Preview" -ForegroundColor Yellow
+  Write-Host "  - or append a bypass:  ?x-vercel-protection-bypass=<AUTOMATION_SECRET>" -ForegroundColor Yellow
+  Write-Host "  - or verify locally:   next build && next start, then probe 127.0.0.1" -ForegroundColor Yellow
+  Write-Host ""
+  exit 2
+}
 if ($probe.Status -ge 400) {
-  Write-Host "  Site responded HTTP $($probe.Status) - if that is 401, the preview has" -ForegroundColor Yellow
-  Write-Host "  Deployment Protection on. Disable it or use a bypass token, or every" -ForegroundColor Yellow
-  Write-Host "  result below reflects the auth page rather than your pages." -ForegroundColor Yellow
+  Write-Host "  Site responded HTTP $($probe.Status) - results below may not reflect your pages." -ForegroundColor Yellow
 }
 
 $fail = 0
