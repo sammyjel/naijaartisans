@@ -3,6 +3,7 @@ import { isAdmin } from "@/lib/admin";
 import AdminLogin from "@/components/AdminLogin";
 import AdminLogout from "@/components/AdminLogout";
 import AdminMapClient from "@/components/AdminMapClient";
+import JobBackfillPanel from "@/components/JobBackfillPanel";
 import { isFeatured } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -97,6 +98,8 @@ export default async function AdminPage() {
         <Stat label="Joined this week" value={newThisWeek} accent="text-brand-600" />
         <Stat label={`Revenue (${paymentCount} paid)`} value={`₦${revenueNaira.toLocaleString("en-NG")}`} accent="text-green-700" />
       </div>
+
+      <JobBackfillPanel />
 
       {/* Leads from the lead magnets */}
       {leads.length > 0 && (
