@@ -23,10 +23,12 @@
 
 import { prisma } from "./prisma";
 import { sendEmail, emailConfigured } from "./email";
+import { notifyOperator } from "./alerts";
 import { SITE_URL } from "./seo";
 import { track, trackZeroMatch } from "./metrics";
 import {
   MAX_ARTISANS_PER_JOB,
+  NOTIFY_SCOPE,
   dedupeKeyForJobMatch,
   dedupeKeyForQuote,
   rankArtisansForJob,
@@ -34,10 +36,23 @@ import {
 
 // Re-exported so callers and tests have one import site for the whole feature,
 // while the rules themselves live in a database-free module.
-export { MAX_ARTISANS_PER_JOB, dedupeKeyForJobMatch, dedupeKeyForQuote, rankArtisansForJob };
+export {
+  MAX_ARTISANS_PER_JOB,
+  NOTIFY_SCOPE,
+  dedupeKeyForJobMatch,
+  dedupeKeyForQuote,
+  rankArtisansForJob,
+};
 
-/** Emails go out in small batches so one job post cannot open 15 sockets at once. */
-const EMAIL_BATCH = 4;
+/**
+ * How many emails go out concurrently.
+ *
+ * Broadcasting to every artisan means ~45 sends per job, so this is the
+ * difference between a job post taking ~2s and ~10s. Kept modest anyway: a
+ * burst of 45 parallel requests is how you get rate-limited by Resend, and a
+ * rate-limited send is a notification nobody receives.
+ */
+const EMAIL_BATCH = 8;
 
 /**
  * Chooses which artisans should hear about a job.
@@ -51,7 +66,7 @@ const EMAIL_BATCH = 4;
  *
  * @param {{ categoryId: string, city: string, excludeUserId?: string }} job
  * @param {number} [limit]
- * @returns {Promise<Array<{ id: string, name: string, email: string|null, city: string|null, sameCity: boolean }>>}
+ * @returns {Promise<Array<{ id: string, name: string, email: string|null, city: string|null, matchesTrade: boolean, sameCity: boolean, tier: number }>>}
  */
 export async function findEligibleArtisansForJob(job, limit = MAX_ARTISANS_PER_JOB) {
   const { categoryId, city, excludeUserId } = job;
@@ -62,8 +77,9 @@ export async function findEligibleArtisansForJob(job, limit = MAX_ARTISANS_PER_J
       role: "ARTISAN",
       // The customer must never be notified about their own job.
       ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
-      // "Offers this trade" is the only hard requirement.
-      services: { some: { categoryId } },
+      // Default scope is "all": every registered artisan hears about every job.
+      // JOB_NOTIFY_SCOPE=matched narrows it to artisans who list this trade.
+      ...(NOTIFY_SCOPE === "matched" ? { services: { some: { categoryId } } } : {}),
     },
     select: {
       id: true,
@@ -73,10 +89,18 @@ export async function findEligibleArtisansForJob(job, limit = MAX_ARTISANS_PER_J
       featuredUntil: true,
       proUntil: true,
       createdAt: true,
+      // Whether they list THIS trade, fetched as part of the same query rather
+      // than one lookup per artisan. Drives both the ranking and the wording of
+      // the email, so nobody is left wondering why they got a job outside their
+      // line of work.
+      services: { where: { categoryId }, select: { id: true }, take: 1 },
     },
   });
 
-  return rankArtisansForJob(candidates, { city, limit });
+  return rankArtisansForJob(
+    candidates.map((a) => ({ ...a, matchesTrade: a.services.length > 0 })),
+    { city, limit }
+  );
 }
 
 // -- email rendering --------------------------------------------------------
@@ -96,7 +120,50 @@ function abs(path) {
   return String(SITE_URL).replace(/\/+$/, "") + path;
 }
 
-function jobEmailHtml({ artisanName, job, categoryName, sameCity }) {
+/**
+ * Builds the one-line explanation of why this artisan received this job, and the
+ * banner shown when it is outside their trade or city.
+ *
+ * Being explicit about relevance is what keeps a broadcast from reading as spam:
+ * an artisan who is told "this is outside your usual trade" can ignore it without
+ * concluding our emails are worthless.
+ */
+function relevanceCopy({ tier, job }) {
+  switch (tier) {
+    case 0:
+      return {
+        lead: "A customer just posted a job that matches what you do in " + esc(job.city) + ".",
+        banner: "",
+      };
+    case 1:
+      return {
+        lead: "A customer just posted a job that matches your trade.",
+        banner:
+          '<p style="margin:0 0 14px;padding:10px 12px;background:#fff7ed;border-radius:8px;color:#9a3412;font-size:13px">' +
+          "This job is in <strong>" +
+          esc(job.city) +
+          "</strong>, outside your listed city. Only quote if you can cover it.</p>",
+      };
+    case 2:
+      return {
+        lead: "A customer in " + esc(job.city) + " just posted a job.",
+        banner:
+          '<p style="margin:0 0 14px;padding:10px 12px;background:#f1f5f9;border-radius:8px;color:#475569;font-size:13px">' +
+          "This is outside the trade on your profile, but it is in your city. " +
+          "Quote if you can do the work, or ignore it.</p>",
+      };
+    default:
+      return {
+        lead: "A new job has been posted on NaijaArtisans.",
+        banner:
+          '<p style="margin:0 0 14px;padding:10px 12px;background:#f1f5f9;border-radius:8px;color:#475569;font-size:13px">' +
+          "You are getting this because every registered artisan is alerted to every " +
+          "new job. It is outside your listed trade and city — ignore it if it is not for you.</p>",
+      };
+  }
+}
+
+function jobEmailHtml({ artisanName, job, categoryName, tier }) {
   const cta = abs("/jobs/" + job.id);
   const rows = [
     ["Service", categoryName],
@@ -115,13 +182,7 @@ function jobEmailHtml({ artisanName, job, categoryName, sameCity }) {
     )
     .join("");
 
-  const outOfCityNote = sameCity
-    ? ""
-    : '<p style="margin:0 0 14px;padding:10px 12px;background:#fff7ed;border-radius:8px;color:#9a3412;font-size:13px">' +
-      "Note: this job is in <strong>" +
-      esc(job.city) +
-      "</strong>, which is outside your listed city. Only quote if you can cover it." +
-      "</p>";
+  const { lead, banner } = relevanceCopy({ tier, job });
 
   return (
     '<div style="font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;max-width:560px">' +
@@ -134,10 +195,9 @@ function jobEmailHtml({ artisanName, job, categoryName, sameCity }) {
     esc(artisanName || "there") +
     ",</p>" +
     '<p style="margin:0 0 14px;color:#334155;font-size:14px;line-height:1.55">' +
-    "A customer just posted a job that matches what you do" +
-    (sameCity ? " in " + esc(job.city) : "") +
-    ". Quote first and you are usually the one who gets it.</p>" +
-    outOfCityNote +
+    lead +
+    " Quote first and you are usually the one who gets it.</p>" +
+    banner +
     '<p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#0f172a">' +
     esc(job.title) +
     "</p>" +
@@ -152,9 +212,11 @@ function jobEmailHtml({ artisanName, job, categoryName, sameCity }) {
     esc(cta) +
     '" style="display:inline-block;background:#0f4a80;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:700;font-size:14px">View job &amp; send a quote</a>' +
     "</p>" +
-    '<p style="margin:16px 0 0;color:#94a3b8;font-size:12px">You are getting this because you list ' +
-    esc(categoryName) +
-    " on NaijaArtisans.</p>" +
+    '<p style="margin:16px 0 0;color:#94a3b8;font-size:12px">' +
+    (tier <= 1
+      ? "You are getting this because you list " + esc(categoryName) + " on NaijaArtisans."
+      : "You are getting this because NaijaArtisans alerts every registered artisan to every new job.") +
+    "</p>" +
     "</div></div>"
   );
 }
@@ -262,6 +324,54 @@ async function deliverPending(pending, renderHtml) {
   return { emailed, failed, skipped };
 }
 
+/**
+ * Emails the site owner every time a job is posted, so it can be followed up by
+ * hand while the marketplace is still small enough for that to be worth doing.
+ *
+ * Goes through notifyOperator (src/lib/alerts.js), which already owns "the
+ * owner's inbox" for this site — recipient comes from OPERATOR_ALERT_EMAIL.
+ * Adding a second mechanism for the same idea is how one of them ends up stale
+ * and the alerts nobody receives are the ones nobody notices.
+ *
+ * The delivery counts are included deliberately. "A job was posted" is only half
+ * the story; what the owner needs to know is whether anyone actually heard about
+ * it, and the difference between 45 emailed and 45 failed is invisible otherwise.
+ *
+ * @param {{id:string,title:string,description:string,city:string,budget:number|null}} job
+ * @param {string} categoryName
+ * @param {{eligible:number,created:number,emailed:number,failed:number,skipped:number,onTrade:number}} stats
+ */
+export function alertOwnerOfJob(job, categoryName, stats) {
+  const base = String(SITE_URL).replace(/\/+$/, "");
+  const reachedNobody = stats.emailed === 0;
+
+  return notifyOperator({
+    title: reachedNobody ? "New job posted — BUT NOBODY WAS EMAILED" : "New job posted",
+    subject: reachedNobody
+      ? `[NaijaArtisans] Job posted but 0 artisans emailed — ${job.title}`
+      : `[NaijaArtisans] New job: ${job.title} (${stats.emailed} artisans emailed)`,
+    urgent: reachedNobody,
+    intro: reachedNobody
+      ? "A customer posted a job and no artisan received an email. The job is live on the board, but nobody has been told about it. Check RESEND_API_KEY and that artisan accounts have email addresses."
+      : `A customer posted a job and ${stats.emailed} artisan${stats.emailed === 1 ? " was" : "s were"} emailed. Follow up if no quotes arrive.`,
+    rows: [
+      ["Job", job.title],
+      ["Service", categoryName],
+      ["City", job.city],
+      job.budget ? ["Budget", "₦" + Number(job.budget).toLocaleString("en-NG")] : null,
+      ["Artisans alerted", String(stats.created)],
+      ["Emails sent", String(stats.emailed)],
+      stats.failed ? ["Emails FAILED", String(stats.failed)] : null,
+      // Almost always "artisan has no email address" — worth surfacing, because
+      // it is silently capping reach and is fixable by chasing those accounts.
+      stats.skipped ? ["Skipped (no email)", String(stats.skipped)] : null,
+      ["Matching this trade", `${stats.onTrade} of ${stats.eligible}`],
+      ["Description", String(job.description || "").slice(0, 300)],
+    ].filter(Boolean),
+    cta: { label: "Open the job", href: `${base}/jobs/${job.id}` },
+  });
+}
+
 // -- public API ------------------------------------------------------------
 
 /**
@@ -284,22 +394,36 @@ export async function notifyArtisansOfJob(job) {
       excludeUserId: job.customerId,
     });
 
+    const onTrade = eligible.filter((a) => a.matchesTrade).length;
+
     track("job_match_evaluated", {
       jobId: job.id,
       city: job.city,
       categoryId: job.categoryId,
+      scope: NOTIFY_SCOPE,
       eligible: eligible.length,
+      onTrade,
       sameCity: eligible.filter((a) => a.sameCity).length,
     });
 
     if (eligible.length === 0) {
-      // Logged loudly: the customer's job looks posted either way, so a zero
-      // match is invisible unless something says it out loud.
+      // Logged loudly: the customer's job looks posted either way, so a job that
+      // reached nobody is invisible unless something says it out loud. The owner
+      // is told too — with a broadcast configured, zero recipients means every
+      // artisan account is missing or excluded, which is a fault, not a quiet day.
       trackZeroMatch({ jobId: job.id, categoryId: job.categoryId, city: job.city });
+      await alertOwnerOfJob(job, categoryName, {
+        eligible: 0,
+        created: 0,
+        emailed: 0,
+        failed: 0,
+        skipped: 0,
+        onTrade: 0,
+      }).catch(() => {});
       return empty;
     }
 
-    const sameCityById = new Map(eligible.map((a) => [a.id, a.sameCity]));
+    const tierById = new Map(eligible.map((a) => [a.id, a.tier]));
 
     const created = await prisma.notification.createMany({
       data: eligible.map((a) => ({
@@ -338,9 +462,21 @@ export async function notifyArtisansOfJob(job) {
         artisanName: n.user && n.user.name,
         job,
         categoryName,
-        sameCity: sameCityById.get(n.userId) !== false,
+        tier: tierById.has(n.userId) ? tierById.get(n.userId) : 3,
       })
     );
+
+    // Tell the owner, so a job can be followed up by hand. Last, and never
+    // allowed to throw: the artisans have already been emailed by this point,
+    // and failing the job post over the owner's own copy would be absurd.
+    await alertOwnerOfJob(job, categoryName, {
+      eligible: eligible.length,
+      created: created.count,
+      emailed: res.emailed,
+      failed: res.failed,
+      skipped: res.skipped,
+      onTrade,
+    }).catch((e) => console.error("[notifications] owner alert failed:", e));
 
     return {
       eligible: eligible.length,
@@ -467,7 +603,11 @@ export async function retryPendingNotificationEmails(opts = {}) {
       artisanName: n.user && n.user.name,
       job: n.jobRequest,
       categoryName: (n.jobRequest.category && n.jobRequest.category.name) || "your trade",
-      sameCity: true,
+      // Tier 3 is the neutral "every artisan is alerted to every job" wording.
+      // A retry runs long after the original send, and recomputing each
+      // recipient's exact relevance would mean re-querying their services for a
+      // difference of one sentence — the generic version is honest either way.
+      tier: 3,
     })
   );
   return { attempted: usable.length, ...res };

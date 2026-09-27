@@ -7,21 +7,28 @@
 // and neither raises an error.
 
 /**
- * Upper bound on artisans notified per job. Not a performance guard so much as a
- * trust one: blasting all 60 artisans for a Lagos tiling job trains them to
- * ignore our emails, and an ignored notification is worth the same as none.
+ * Who hears about a new job.
+ *
+ *   "all"      every registered artisan, whatever their trade or city (default)
+ *   "matched"  only artisans who list a service in the job's category
+ *
+ * Set JOB_NOTIFY_SCOPE=matched to narrow it without a code change.
+ *
+ * "all" is the deliberate choice while the marketplace is small: with 51
+ * artisans and 9 jobs ever, the cost of a plumber seeing a tailoring job is
+ * lower than the cost of a customer getting no quote. That trade reverses as
+ * volume grows — when artisans start ignoring the emails, switch to "matched".
+ * Ranking below is what makes that switch cheap: the ordering is already right.
  */
-export const MAX_ARTISANS_PER_JOB = 15;
+export const NOTIFY_SCOPE =
+  (process.env.JOB_NOTIFY_SCOPE || "all").toLowerCase() === "matched" ? "matched" : "all";
 
 /**
- * If a job's own city yields fewer than this many artisans, top up with
- * same-trade artisans elsewhere so a customer in an underserved city still gets
- * quotes. Those recipients are told the job is outside their city.
+ * Hard ceiling on recipients per job. Well above the current 51 artisans, so in
+ * practice everyone is notified; it exists so a future import of 5,000 accounts
+ * cannot turn one job post into 5,000 emails inside a single request.
  */
-export const CITY_FLOOR = 3;
-
-/** How many out-of-city artisans the top-up may add. */
-export const OUT_OF_CITY_CAP = 5;
+export const MAX_ARTISANS_PER_JOB = Number(process.env.JOB_NOTIFY_MAX || 300);
 
 /** The idempotency key for a job-match notification. Pure, so it can be asserted on. */
 export function dedupeKeyForJobMatch(jobId, artisanId) {
@@ -36,44 +43,62 @@ export function dedupeKeyForQuote(quoteId, customerId) {
 const isActive = (until) => Boolean(until && new Date(until).getTime() > Date.now());
 
 /**
- * Ranks and selects artisans for a job from an already-fetched candidate list.
+ * Relevance tier, lowest first. Drives both ordering and the wording of the
+ * email, so an artisan is always told WHY they received a job.
  *
- * Order: same city first, then paid standing (featured/pro), then longest-standing
- * account as a stable tie-break.
+ *   0  their trade, their city      "matches your trade, in your city"
+ *   1  their trade, another city    "matches your trade, outside your city"
+ *   2  another trade, their city    "in your city"
+ *   3  another trade, another city  plainly marked as a general alert
+ */
+export function relevanceTier({ matchesTrade, sameCity }) {
+  if (matchesTrade && sameCity) return 0;
+  if (matchesTrade) return 1;
+  if (sameCity) return 2;
+  return 3;
+}
+
+/**
+ * Ranks artisans for a job from an already-fetched candidate list.
  *
- * @param {Array<{id:string,name:string,email:string|null,city:string|null,featuredUntil?:Date|string|null,proUntil?:Date|string|null,createdAt:Date|string}>} candidates
+ * Order: relevance tier -> paid standing (featured/pro) -> longest-standing
+ * account as a stable tie-break. Determinism matters: a retried job post must
+ * produce the same recipient set, or the dedupe keys stop lining up.
+ *
+ * @param {Array<{id:string,name:string,email:string|null,city:string|null,matchesTrade?:boolean,featuredUntil?:Date|string|null,proUntil?:Date|string|null,createdAt:Date|string}>} candidates
  * @param {{ city: string, limit?: number }} opts
- * @returns {Array<{id:string,name:string,email:string|null,city:string|null,sameCity:boolean}>}
+ * @returns {Array<{id:string,name:string,email:string|null,city:string|null,matchesTrade:boolean,sameCity:boolean,tier:number}>}
  */
 export function rankArtisansForJob(candidates, { city, limit = MAX_ARTISANS_PER_JOB } = {}) {
-  const rankKey = (a) => [
-    isActive(a.featuredUntil) || isActive(a.proUntil) ? 0 : 1,
-    new Date(a.createdAt).getTime(),
-  ];
-  const byRank = (a, b) => {
-    const [pa, ca] = rankKey(a);
-    const [pb, cb] = rankKey(b);
-    return pa !== pb ? pa - pb : ca - cb;
-  };
+  const annotated = candidates.map((a) => {
+    const sameCity = Boolean(a.city && city && a.city === city);
+    const matchesTrade = Boolean(a.matchesTrade);
+    return {
+      id: a.id,
+      name: a.name,
+      email: a.email,
+      city: a.city,
+      matchesTrade,
+      sameCity,
+      tier: relevanceTier({ matchesTrade, sameCity }),
+      _paid: isActive(a.featuredUntil) || isActive(a.proUntil) ? 0 : 1,
+      _age: new Date(a.createdAt).getTime(),
+    };
+  });
 
-  const inCity = candidates.filter((a) => a.city && city && a.city === city).sort(byRank);
-  const elsewhere = candidates.filter((a) => !(a.city && city && a.city === city)).sort(byRank);
+  annotated.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a._paid !== b._paid) return a._paid - b._paid;
+    return a._age - b._age;
+  });
 
-  const picked = inCity.slice(0, limit).map((a) => ({ ...a, sameCity: true }));
-
-  // Underserved city: top up rather than leave the customer with silence. Without
-  // this, a customer in a city with no registered artisan of that trade gets
-  // nothing at all — the exact failure this release exists to fix.
-  if (picked.length < CITY_FLOOR) {
-    const room = Math.min(OUT_OF_CITY_CAP, limit - picked.length);
-    picked.push(...elsewhere.slice(0, room).map((a) => ({ ...a, sameCity: false })));
-  }
-
-  return picked.map((a) => ({
+  return annotated.slice(0, limit).map((a) => ({
     id: a.id,
     name: a.name,
     email: a.email,
     city: a.city,
+    matchesTrade: a.matchesTrade,
     sameCity: a.sameCity,
+    tier: a.tier,
   }));
 }

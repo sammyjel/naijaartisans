@@ -1,4 +1,4 @@
-// Artisan matching rules.
+// Artisan matching / broadcast rules.
 //
 // Run with: npm test
 //
@@ -6,81 +6,133 @@
 // rules are tested as rules rather than through a live Postgres. The DB-backed
 // paths (createMany idempotency, email status transitions) need a real database
 // and are covered by the manual checklist in docs/VERIFICATION.md plus the
-// source-invariant tests in notifications-contract.test.mjs.
+// source-invariant tests in liquidity-contract.test.mjs.
 
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
   rankArtisansForJob,
+  relevanceTier,
   dedupeKeyForJobMatch,
   dedupeKeyForQuote,
   MAX_ARTISANS_PER_JOB,
-  CITY_FLOOR,
-  OUT_OF_CITY_CAP,
+  NOTIFY_SCOPE,
 } from "../src/lib/matching.js";
 
 const DAY = 86400000;
 const past = new Date(Date.now() - DAY);
 const future = new Date(Date.now() + 30 * DAY);
 
-/** Minimal artisan fixture. */
+/** Minimal artisan fixture. `matchesTrade` mirrors what the query computes. */
 function artisan(id, city, extra = {}) {
   return {
     id,
     name: "Artisan " + id,
     email: id + "@example.test",
     city,
+    matchesTrade: false,
     createdAt: new Date("2026-01-01T00:00:00Z"),
     ...extra,
   };
 }
 
-test("prefers artisans in the job's city", () => {
-  const picked = rankArtisansForJob(
-    [artisan("far1", "Kano"), artisan("near1", "Lagos"), artisan("far2", "Abuja")],
-    { city: "Lagos" }
-  );
-  // Only one is in Lagos, and CITY_FLOOR forces a top-up, so the Lagos one must
-  // still come first and be flagged sameCity.
-  assert.equal(picked[0].id, "near1");
-  assert.equal(picked[0].sameCity, true);
+// ── relevance tiers ────────────────────────────────────────────────────────
+
+test("relevance tiers rank trade+city above everything else", () => {
+  assert.equal(relevanceTier({ matchesTrade: true, sameCity: true }), 0);
+  assert.equal(relevanceTier({ matchesTrade: true, sameCity: false }), 1);
+  assert.equal(relevanceTier({ matchesTrade: false, sameCity: true }), 2);
+  assert.equal(relevanceTier({ matchesTrade: false, sameCity: false }), 3);
 });
 
-test("marks out-of-city top-ups as sameCity: false", () => {
-  const picked = rankArtisansForJob([artisan("near1", "Lagos"), artisan("far1", "Kano")], {
-    city: "Lagos",
-  });
-  const far = picked.find((p) => p.id === "far1");
-  assert.ok(far, "expected the out-of-city artisan to be topped up");
-  assert.equal(far.sameCity, false, "out-of-city recipients must be flagged so the email can say so");
-});
+// ── broadcast behaviour ────────────────────────────────────────────────────
 
-test("ranks featured and pro artisans above unpaid ones in the same city", () => {
+test("every artisan is included, not just those matching the trade", () => {
+  // This is the whole point of the broadcast: a job must reach all 51 artisans.
   const picked = rankArtisansForJob(
     [
-      artisan("plain", "Lagos"),
-      artisan("featured", "Lagos", { featuredUntil: future }),
-      artisan("pro", "Lagos", { proUntil: future }),
+      artisan("plumber-lagos", "Lagos", { matchesTrade: true }),
+      artisan("tailor-kano", "Kano"),
+      artisan("welder-abuja", "Abuja"),
+    ],
+    { city: "Lagos" }
+  );
+  assert.equal(picked.length, 3, "nobody may be filtered out of a broadcast");
+});
+
+test("the most relevant artisan is ordered first", () => {
+  const picked = rankArtisansForJob(
+    [
+      artisan("unrelated", "Kano"),
+      artisan("same-city-only", "Lagos"),
+      artisan("trade-elsewhere", "Abuja", { matchesTrade: true }),
+      artisan("trade-and-city", "Lagos", { matchesTrade: true }),
     ],
     { city: "Lagos" }
   );
   assert.deepEqual(
-    picked.slice(0, 2).map((p) => p.id).sort(),
-    ["featured", "pro"],
-    "paid artisans should occupy the first two slots"
+    picked.map((p) => p.id),
+    ["trade-and-city", "trade-elsewhere", "same-city-only", "unrelated"]
   );
+});
+
+test("each recipient carries the tier the email copy depends on", () => {
+  const picked = rankArtisansForJob(
+    [artisan("a", "Lagos", { matchesTrade: true }), artisan("b", "Kano")],
+    { city: "Lagos" }
+  );
+  assert.equal(picked[0].tier, 0);
+  assert.equal(picked[1].tier, 3);
+  // Without these an artisan cannot be told WHY they got an off-trade job.
+  assert.equal(picked[0].matchesTrade, true);
+  assert.equal(picked[1].matchesTrade, false);
+});
+
+test("a job in a city with no artisans still reaches everyone", () => {
+  // The original failure: a customer in an underserved city got total silence.
+  const picked = rankArtisansForJob(
+    [artisan("k1", "Kano"), artisan("a1", "Abuja"), artisan("i1", "Ibadan")],
+    { city: "Maiduguri" }
+  );
+  assert.equal(picked.length, 3);
+  assert.ok(picked.every((p) => p.tier === 3));
+});
+
+test("an off-trade job still reaches every artisan", () => {
+  const picked = rankArtisansForJob(
+    [artisan("a", "Lagos"), artisan("b", "Lagos"), artisan("c", "Abuja")],
+    { city: "Lagos" }
+  );
+  assert.equal(picked.length, 3, "nobody matches the trade, but all are alerted");
+});
+
+// ── ranking within a tier ──────────────────────────────────────────────────
+
+test("paid artisans rank above unpaid ones within the same tier", () => {
+  const picked = rankArtisansForJob(
+    [
+      artisan("plain", "Lagos", { matchesTrade: true }),
+      artisan("featured", "Lagos", { matchesTrade: true, featuredUntil: future }),
+      artisan("pro", "Lagos", { matchesTrade: true, proUntil: future }),
+    ],
+    { city: "Lagos" }
+  );
+  assert.deepEqual(picked.slice(0, 2).map((p) => p.id).sort(), ["featured", "pro"]);
   assert.equal(picked[2].id, "plain");
 });
 
-test("an expired featured badge does not earn priority", () => {
+test("an expired featured badge earns no priority", () => {
   const picked = rankArtisansForJob(
-    [artisan("expired", "Lagos", { featuredUntil: past }), artisan("current", "Lagos", { featuredUntil: future })],
+    [
+      artisan("expired", "Lagos", { matchesTrade: true, featuredUntil: past }),
+      artisan("current", "Lagos", { matchesTrade: true, featuredUntil: future }),
+    ],
     { city: "Lagos" }
   );
   assert.equal(picked[0].id, "current");
 });
 
-test("uses longest-standing account as a stable tie-break", () => {
+test("longest-standing account is the stable tie-break", () => {
   const picked = rankArtisansForJob(
     [
       artisan("newer", "Lagos", { createdAt: new Date("2026-06-01T00:00:00Z") }),
@@ -91,63 +143,55 @@ test("uses longest-standing account as a stable tie-break", () => {
   assert.equal(picked[0].id, "older");
 });
 
-test("never notifies more than the cap, however many qualify", () => {
-  const many = Array.from({ length: 60 }, (_, i) => artisan("a" + i, "Lagos"));
-  const picked = rankArtisansForJob(many, { city: "Lagos" });
-  assert.equal(picked.length, MAX_ARTISANS_PER_JOB);
-  assert.ok(MAX_ARTISANS_PER_JOB < 60, "the cap must actually be a cap");
+test("a null city never counts as the same city", () => {
+  const picked = rankArtisansForJob([artisan("nocity", null)], { city: "Lagos" });
+  assert.equal(picked[0].sameCity, false);
+  assert.equal(picked[0].tier, 3);
 });
 
-test("respects an explicit lower limit", () => {
-  const many = Array.from({ length: 20 }, (_, i) => artisan("a" + i, "Lagos"));
-  assert.equal(rankArtisansForJob(many, { city: "Lagos", limit: 4 }).length, 4);
+// ── safety rails ───────────────────────────────────────────────────────────
+
+test("the cap is high enough to reach the whole current roster", () => {
+  // 51 artisans today. The cap exists only to stop a future bulk import turning
+  // one job post into thousands of emails inside a single request.
+  assert.ok(
+    MAX_ARTISANS_PER_JOB >= 100,
+    `cap of ${MAX_ARTISANS_PER_JOB} would silently exclude artisans`
+  );
+  const many = Array.from({ length: 51 }, (_, i) => artisan("a" + i, "Lagos"));
+  assert.equal(rankArtisansForJob(many, { city: "Lagos" }).length, 51);
 });
 
-test("does not top up when the city already meets the floor", () => {
+test("the cap still truncates an implausibly large roster", () => {
+  const huge = Array.from({ length: MAX_ARTISANS_PER_JOB + 50 }, (_, i) => artisan("a" + i, "Lagos"));
+  assert.equal(rankArtisansForJob(huge, { city: "Lagos" }).length, MAX_ARTISANS_PER_JOB);
+});
+
+test("an explicit lower limit keeps the most relevant recipients", () => {
   const picked = rankArtisansForJob(
     [
-      artisan("l1", "Lagos"),
-      artisan("l2", "Lagos"),
-      artisan("l3", "Lagos"),
-      artisan("k1", "Kano"),
+      artisan("irrelevant", "Kano"),
+      artisan("relevant", "Lagos", { matchesTrade: true }),
+      artisan("alsoIrrelevant", "Abuja"),
     ],
-    { city: "Lagos" }
+    { city: "Lagos", limit: 1 }
   );
-  assert.equal(picked.length, 3, "three in-city artisans meet CITY_FLOOR, so no top-up");
-  assert.ok(
-    picked.every((p) => p.sameCity),
-    "nobody outside the city should be notified when the floor is met"
-  );
-});
-
-test("an underserved city still produces recipients (the zero-quote failure)", () => {
-  // No artisan in the job's city at all. The customer must not get silence.
-  const picked = rankArtisansForJob(
-    [artisan("k1", "Kano"), artisan("a1", "Abuja"), artisan("i1", "Ibadan")],
-    { city: "Maiduguri" }
-  );
-  assert.ok(picked.length > 0, "a city with no local artisan must still notify someone");
-  assert.ok(picked.length <= OUT_OF_CITY_CAP);
-  assert.ok(picked.every((p) => p.sameCity === false));
+  assert.deepEqual(picked.map((p) => p.id), ["relevant"]);
 });
 
 test("returns nothing when there are no candidates", () => {
   assert.deepEqual(rankArtisansForJob([], { city: "Lagos" }), []);
 });
 
-test("treats a null city on either side as not-a-match rather than a match", () => {
-  const picked = rankArtisansForJob([artisan("nocity", null)], { city: "Lagos" });
-  assert.equal(picked.length, 1, "still eligible via the top-up");
-  assert.equal(picked[0].sameCity, false, "a null city must never count as the same city");
+test("default scope is broadcast to all artisans", () => {
+  assert.equal(NOTIFY_SCOPE, "all", "JOB_NOTIFY_SCOPE should default to all");
 });
+
+// ── idempotency keys ───────────────────────────────────────────────────────
 
 test("dedupe keys are deterministic and distinct per artisan", () => {
   assert.equal(dedupeKeyForJobMatch("job1", "art1"), "job:job1:artisan:art1");
-  assert.equal(
-    dedupeKeyForJobMatch("job1", "art1"),
-    dedupeKeyForJobMatch("job1", "art1"),
-    "same inputs must give the same key - this is what makes a retried POST a no-op"
-  );
+  assert.equal(dedupeKeyForJobMatch("job1", "art1"), dedupeKeyForJobMatch("job1", "art1"));
   assert.notEqual(dedupeKeyForJobMatch("job1", "art1"), dedupeKeyForJobMatch("job1", "art2"));
   assert.notEqual(dedupeKeyForJobMatch("job1", "art1"), dedupeKeyForJobMatch("job2", "art1"));
 });
@@ -158,22 +202,13 @@ test("quote dedupe keys cannot collide with job-match keys", () => {
 
 test("the same job produces an identical recipient set on a retry", () => {
   const candidates = [
-    artisan("a", "Lagos", { featuredUntil: future }),
+    artisan("a", "Lagos", { matchesTrade: true, featuredUntil: future }),
     artisan("b", "Lagos"),
     artisan("c", "Kano"),
   ];
-  const first = rankArtisansForJob(candidates, { city: "Lagos" });
-  const second = rankArtisansForJob(candidates, { city: "Lagos" });
   assert.deepEqual(
-    first.map((p) => p.id),
-    second.map((p) => p.id),
+    rankArtisansForJob(candidates, { city: "Lagos" }).map((p) => p.id),
+    rankArtisansForJob(candidates, { city: "Lagos" }).map((p) => p.id),
     "matching must be deterministic, or a retry would notify a different set"
   );
-});
-
-test("CITY_FLOOR and OUT_OF_CITY_CAP are sane relative to the cap", () => {
-  assert.ok(CITY_FLOOR > 0);
-  assert.ok(OUT_OF_CITY_CAP > 0);
-  assert.ok(CITY_FLOOR <= MAX_ARTISANS_PER_JOB);
-  assert.ok(OUT_OF_CITY_CAP <= MAX_ARTISANS_PER_JOB);
 });

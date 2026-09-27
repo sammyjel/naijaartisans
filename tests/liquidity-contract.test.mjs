@@ -119,6 +119,70 @@ test("notification helpers never throw into their callers", () => {
   }
 });
 
+// ── broadcast + owner alert ────────────────────────────────────────────────
+
+test("the owner is alerted on every job post", () => {
+  assert.match(notificationsLib, /export function alertOwnerOfJob/);
+  const notifyAt = notificationsLib.indexOf("alertOwnerOfJob(job, categoryName, {");
+  assert.ok(notifyAt > -1, "expected the owner alert to be called with real stats");
+});
+
+test("the owner alert reuses the existing operator inbox", () => {
+  // A second mechanism for "email the owner" is how one of them goes stale.
+  assert.match(notificationsLib, /import \{ notifyOperator \} from "\.\/alerts"/);
+});
+
+test("the owner alert reports delivery counts, not just that a job exists", () => {
+  // Fixed-size window rather than brace matching: the function contains nested
+  // object literals, so "\n}\n" lands inside it rather than at its end.
+  const body = notificationsLib.slice(
+    notificationsLib.indexOf("export function alertOwnerOfJob"),
+    notificationsLib.indexOf("export function alertOwnerOfJob") + 2600
+  );
+  for (const field of ["stats.emailed", "stats.created", "stats.failed"]) {
+    assert.ok(body.includes(field), `owner alert should surface ${field}`);
+  }
+});
+
+test("a job that emailed nobody is flagged as urgent to the owner", () => {
+  const fn = notificationsLib.slice(notificationsLib.indexOf("export function alertOwnerOfJob"));
+  assert.match(fn.slice(0, 2500), /reachedNobody/);
+  assert.match(fn.slice(0, 2500), /urgent:/);
+});
+
+test("the owner alert cannot fail a job post", () => {
+  // The artisans have already been emailed by then; failing the request over the
+  // owner's own copy would be absurd.
+  assert.match(notificationsLib, /alertOwnerOfJob\([\s\S]{0,400}?\}\)\.catch\(/);
+});
+
+test("the owner is told even when zero artisans were found", () => {
+  const zeroBlock = notificationsLib.slice(
+    notificationsLib.indexOf("if (eligible.length === 0)"),
+    notificationsLib.indexOf("return empty;", notificationsLib.indexOf("if (eligible.length === 0)"))
+  );
+  assert.match(zeroBlock, /alertOwnerOfJob/, "a job reaching nobody is exactly when the owner must hear");
+});
+
+test("broadcast scope does not filter artisans by trade", () => {
+  // The category filter must be conditional on JOB_NOTIFY_SCOPE, not hardcoded.
+  assert.match(
+    notificationsLib,
+    /NOTIFY_SCOPE === "matched" \? \{ services: \{ some: \{ categoryId \} \} \} : \{\}/,
+    "every artisan should be queried unless the scope is explicitly narrowed"
+  );
+});
+
+test("trade matching is resolved in the same query, not per artisan", () => {
+  // One lookup per artisan would be 51 extra queries per job post.
+  assert.match(notificationsLib, /services: \{ where: \{ categoryId \}, select: \{ id: true \}, take: 1 \}/);
+});
+
+test("each email explains why that artisan received the job", () => {
+  assert.match(notificationsLib, /function relevanceCopy/);
+  assert.match(notificationsLib, /outside your listed trade/i);
+});
+
 // ── reviews ────────────────────────────────────────────────────────────────
 
 test("a review requires eligibility before it is created", () => {
