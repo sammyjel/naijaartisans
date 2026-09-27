@@ -65,12 +65,19 @@ export default function JobBackfillPanel() {
           </button>
         )}
 
+        {result && result.emailsFailed > 0 && (
+          <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {result.emailsFailed} email{result.emailsFailed === 1 ? "" : "s"} did not go out. Preview
+            again and re-send — only the ones that failed will be retried.
+          </div>
+        )}
+
         {p && !result && (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Fig label="Open jobs" value={p.openJobs} />
-              <Fig label="Artisans alerted" value={p.artisans} />
               <Fig label="Emails to send" value={p.withEmail} accent="text-brand-700" />
+              <Fig label="Already emailed" value={p.alreadyEmailed || 0} accent="text-green-700" />
               <Fig label="No email address" value={p.withoutEmail} accent="text-amber-600" />
             </div>
 
@@ -106,9 +113,19 @@ export default function JobBackfillPanel() {
             )}
 
             <p className="mt-4 text-sm text-gray-600">
-              {p.withEmail} emails, one per artisan, instead of {p.openJobs} × {p.withEmail} ={" "}
-              {p.openJobs * p.withEmail} separate messages. Safe to run twice — nobody is notified
-              about the same job twice.
+              {p.alreadyEmailed > 0 ? (
+                <>
+                  {p.alreadyEmailed} artisan{p.alreadyEmailed === 1 ? " has" : "s have"} already had
+                  their digest and {p.alreadyEmailed === 1 ? "is" : "are"} excluded. This sends only
+                  the {p.withEmail} still owed one.
+                </>
+              ) : (
+                <>
+                  {p.withEmail} emails, one per artisan, instead of {p.openJobs} × {p.withEmail} ={" "}
+                  {p.openJobs * p.withEmail} separate messages.
+                </>
+              )}{" "}
+              Safe to run again — anyone who already received it is skipped.
             </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -149,6 +166,17 @@ export default function JobBackfillPanel() {
               A summary has been emailed to you. Watch the job board over the next few days — if
               quotes stay at zero, the problem is artisan responsiveness, not delivery.
             </p>
+            <div className="mt-3">
+              <button
+                className="btn-outline"
+                onClick={() => {
+                  setResult(null);
+                  setPreview(null);
+                }}
+              >
+                Check again
+              </button>
+            </div>
             {result.log?.length > 0 && (
               <details className="mt-3">
                 <summary className="cursor-pointer text-sm text-gray-500">Run log</summary>

@@ -25,11 +25,18 @@
 //
 // ── IDEMPOTENCY ────────────────────────────────────────────────────────────
 //
-// Rows carry the same dedupeKey as the live system ("job:<id>:artisan:<id>"),
-// inserted with skipDuplicates, and only notifications still marked PENDING are
-// emailed. Running this twice notifies nobody twice. That matters more than
-// usual here: a duplicate backfill would send all 45 artisans a second copy of
-// the same 8 jobs.
+// Two separate guarantees, because the first one alone was not enough:
+//
+//   in-app   rows carry the same dedupeKey as the live system
+//            ("job:<id>:artisan:<id>") and are inserted with skipDuplicates.
+//
+//   email    an artisan holding a SENT notification for any of these jobs is
+//            dropped from the recipient list entirely.
+//
+// The email half was missing on the first run. Rate limiting cost 17 of 45
+// digests, and a retry would have sent the 28 who succeeded a second copy of
+// the same 8 jobs — the dedupeKey would have happily skipped the in-app rows
+// while the email went out again. A re-run now emails only who is still owed.
 
 import { rankArtisansForJob } from "./matching.js";
 import { sendEmail, emailConfigured } from "./email.js";
@@ -204,13 +211,31 @@ export async function runJobBackfill(prisma, opts = {}) {
     },
   });
 
-  const recipients = artisans.filter((a) => a.email);
+  // Artisans who already have a digest-backed notification marked SENT for one
+  // of these jobs have had their email. Excluding them is what makes a re-run
+  // safe: the 2026-09-28 run lost 17 of 45 digests to rate limiting, and
+  // without this a retry would have sent the other 28 a second copy. The
+  // per-job dedupeKey protects the in-app rows; nothing protected the email.
+  const alreadyEmailed = new Set(
+    jobs.length
+      ? (
+          await prisma.notification.findMany({
+            where: { jobRequestId: { in: jobs.map((j) => j.id) }, emailStatus: "SENT" },
+            select: { userId: true },
+            distinct: ["userId"],
+          })
+        ).map((n) => n.userId)
+      : []
+  );
+
+  const recipients = artisans.filter((a) => a.email && !alreadyEmailed.has(a.id));
   const result = {
     send,
     openJobs: jobs.length,
     artisans: artisans.length,
     withEmail: recipients.length,
-    withoutEmail: artisans.length - recipients.length,
+    withoutEmail: artisans.filter((a) => !a.email).length,
+    alreadyEmailed: alreadyEmailed.size,
     notificationsCreated: 0,
     emailsSent: 0,
     emailsFailed: 0,
@@ -220,7 +245,11 @@ export async function runJobBackfill(prisma, opts = {}) {
 
   log(`${send ? "SENDING" : "DRY RUN (nothing will be sent)"}`);
   log(`  open jobs : ${jobs.length}`);
-  log(`  artisans  : ${artisans.length} (${recipients.length} with an email address)`);
+  log(
+    `  artisans  : ${artisans.length} (${recipients.length} to email` +
+      (alreadyEmailed.size ? `, ${alreadyEmailed.size} already emailed` : "") +
+      `, ${result.withoutEmail} with no address)`
+  );
 
   if (jobs.length === 0 || artisans.length === 0) {
     log("Nothing to do.");
