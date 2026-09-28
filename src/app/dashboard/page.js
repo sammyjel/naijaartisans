@@ -10,6 +10,7 @@ import AvatarUploader from "@/components/AvatarUploader";
 import PortfolioUploader from "@/components/PortfolioUploader";
 import UpgradeCard from "@/components/UpgradeCard";
 import NotificationsPanel from "@/components/NotificationsPanel";
+import DealsPanel from "@/components/DealsPanel";
 import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
@@ -83,6 +84,8 @@ export default function DashboardPage() {
           work is, and burying it under the upgrade card is how job alerts get
           missed. */}
       <NotificationsPanel role={user.role} />
+
+      <DealsPanel />
 
       {/* Upgrade — automated Featured / Pro */}
       {isArtisan && (

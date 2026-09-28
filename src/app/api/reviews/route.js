@@ -20,7 +20,11 @@ export async function GET(request) {
   if (verdict.ok) {
     return NextResponse.json({
       canReview: true,
-      job: { id: verdict.job.id, title: verdict.job.title },
+      // True when a completed deal backs this review, which is what earns the
+      // "Verified job" badge. The form tells the customer so before they write.
+      verified: verdict.verified,
+      job: verdict.job ? { id: verdict.job.id, title: verdict.job.title } : null,
+      deal: verdict.deal ? { id: verdict.deal.id, title: verdict.deal.title } : null,
     });
   }
   return NextResponse.json({ canReview: false, reason: verdict.reason });
@@ -28,9 +32,10 @@ export async function GET(request) {
 
 // POST /api/reviews - leave a review for an artisan.
 //
-// Reviews are now earned rather than open to anyone with an account: the author
-// must have posted a job that this artisan quoted on. See src/lib/reviews.js for
-// why that particular test was chosen.
+// Reviews are earned rather than open to anyone with an account. Two tiers: a
+// COMPLETED deal (the artisan finished and the customer confirmed) is recorded
+// as verified; having merely been quoted still qualifies but is not. See
+// src/lib/reviews.js for why both are accepted.
 export async function POST(request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "You must be logged in." }, { status: 401 });
@@ -61,7 +66,10 @@ export async function POST(request) {
       targetId,
       rating,
       comment,
-      jobRequestId: verdict.job.id,
+      jobRequestId: verdict.job ? verdict.job.id : null,
+      // Set only when a confirmed deal backs it. This is what the profile reads
+      // to render "Verified job", so it must never be filled in speculatively.
+      dealId: verdict.deal ? verdict.deal.id : null,
     });
     return NextResponse.json({ review }, { status: 201 });
   } catch (err) {

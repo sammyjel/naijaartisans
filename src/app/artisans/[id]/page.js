@@ -69,8 +69,12 @@ export default async function ArtisanProfilePage({ params }) {
       where: { id: params.id },
       select: {
         id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true, featuredUntil: true, latitude: true, longitude: true, avatarUrl: true, openTime: true, closeTime: true,
+        completedDealCount: true,
         services: { include: { category: true }, orderBy: { createdAt: "desc" } },
-        reviewsGot: { include: { author: { select: { id: true, name: true } } }, orderBy: { createdAt: "desc" } },
+        reviewsGot: {
+          include: { author: { select: { id: true, name: true } } },
+          orderBy: { createdAt: "desc" },
+        },
       },
   });
 
@@ -86,7 +90,26 @@ export default async function ArtisanProfilePage({ params }) {
     galleryUrls = [];
   }
 
-  const ratings = artisan.reviewsGot.map((r) => r.rating);
+  // Deals in flight. The completed total comes from the stored counter, which is
+  // recomputed from confirmed deals on every transition; this only adds the
+  // "currently working on N jobs" line.
+  let inProgressCount = 0;
+  try {
+    inProgressCount = await prisma.deal.count({
+      where: { artisanId: artisan.id, status: { in: ["IN_PROGRESS", "AWAITING_CONFIRMATION"] } },
+    });
+  } catch {
+    // Deal table not migrated yet — the profile must still render.
+    inProgressCount = 0;
+  }
+  const completedJobs = artisan.completedDealCount || 0;
+
+  // Demo rows are excluded here for the same reason they are excluded from the
+  // stored aggregate: a seeded database must never produce a public star rating.
+  // Without this filter the profile and /browse would disagree, and the profile
+  // would be the one that was wrong.
+  const genuineReviews = artisan.reviewsGot.filter((r) => !r.isDemo);
+  const ratings = genuineReviews.map((r) => r.rating);
   const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
   const hours = businessStatus(artisan.openTime, artisan.closeTime);
 
@@ -173,6 +196,19 @@ export default async function ArtisanProfilePage({ params }) {
                   <p className="mt-0.5 text-sm text-gray-500">🕒 {hours.openLabel} – {hours.closeLabel}</p>
                 )}
                 <div className="mt-2"><Stars value={avg} count={ratings.length} /></div>
+
+                {/* The trust line. Counted by the system from customer-confirmed
+                    deals — the artisan cannot move this number themselves. */}
+                {completedJobs > 0 && (
+                  <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-800 ring-1 ring-green-200">
+                    ✅ {completedJobs} {completedJobs === 1 ? "job" : "jobs"} completed on NaijaArtisans
+                  </p>
+                )}
+                {inProgressCount > 0 && (
+                  <p className="mt-1.5 text-sm text-gray-500">
+                    Currently working on {inProgressCount} {inProgressCount === 1 ? "job" : "jobs"}
+                  </p>
+                )}
               </div>
             </div>
             {artisan.bio && <p className="mt-4 text-gray-700">{artisan.bio}</p>}
@@ -238,6 +274,19 @@ export default async function ArtisanProfilePage({ params }) {
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{r.author.name}</span>
                       <Stars value={r.rating} />
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {/* Backed by a deal the customer confirmed, not just contact. */}
+                      {r.dealId && (
+                        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-green-200">
+                          ✅ Verified job
+                        </span>
+                      )}
+                      {r.isDemo && (
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500 ring-1 ring-gray-200">
+                          Sample
+                        </span>
+                      )}
                     </div>
                     {r.comment && <p className="mt-1 text-sm text-gray-600">{r.comment}</p>}
                     <p className="mt-1 text-xs text-gray-400">{timeAgo(r.createdAt)}</p>

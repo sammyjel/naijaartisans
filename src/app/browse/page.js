@@ -68,6 +68,9 @@ export default async function BrowsePage({ searchParams }) {
             // on all 60 cards costs zero extra queries — which is the entire
             // reason they are denormalised rather than aggregated per card.
             avatarUrl: true, ratingAverage: true, reviewCount: true,
+            // Same reasoning as the two above: a stored counter, so 60 cards
+            // cost no extra queries. Counts only customer-confirmed deals.
+            completedDealCount: true,
           },
         },
       },
@@ -182,6 +185,11 @@ export default async function BrowsePage({ searchParams }) {
                         value={s.artisan.ratingAverage || 0}
                         count={s.artisan.reviewCount || undefined}
                       />
+                      {s.artisan.completedDealCount > 0 && (
+                        <span className="mt-0.5 block text-xs font-semibold text-green-700">
+                          ✅ {s.artisan.completedDealCount} completed
+                        </span>
+                      )}
                     </span>
                   </div>
 

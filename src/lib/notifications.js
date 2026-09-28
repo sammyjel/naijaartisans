@@ -549,6 +549,147 @@ export async function notifyCustomerOfQuote(quote, job, artisan) {
   }
 }
 
+
+// -- deals ------------------------------------------------------------------
+
+/**
+ * Who hears about each deal event, and what they are told.
+ *
+ * Direction matters and is easy to get backwards: the artisan reports the work
+ * done, so the CUSTOMER is the one who needs that email — they are the only
+ * party who can confirm it, and an unconfirmed deal is where this whole flow
+ * stalls. Getting this wrong would mean mailing artisans about their own clicks.
+ */
+const DEAL_EVENTS = {
+  started: {
+    to: "artisan",
+    type: "DEAL_STARTED",
+    title: (d) => "You were hired: " + d.title,
+    body: (d) =>
+      d.customer.name +
+      " accepted your quote" +
+      (d.agreedPrice ? " at " + naira(d.agreedPrice) : "") +
+      ". Their contact details are on the deal.",
+    cta: "Open the deal",
+  },
+  mark_done: {
+    to: "customer",
+    type: "DEAL_WORK_DONE",
+    title: (d) => d.artisan.name + " says the work is finished",
+    body: (d) =>
+      "Confirm it and it counts towards " +
+      d.artisan.name +
+      "'s completed-jobs record. If it is not finished, say so instead.",
+    cta: "Confirm or reject",
+  },
+  confirm: {
+    to: "artisan",
+    type: "DEAL_COMPLETED",
+    title: (d) => "Job confirmed complete: " + d.title,
+    body: (d) =>
+      d.customer.name +
+      " confirmed the work. It now counts towards your completed-jobs record on your profile.",
+    cta: "See your profile",
+  },
+  dispute: {
+    to: "artisan",
+    type: "DEAL_DISPUTED",
+    title: (d) => d.customer.name + " says the job is not finished",
+    body: (d) => d.lastNote || "The deal is back in progress. Get in touch with them to sort it out.",
+    cta: "Open the deal",
+  },
+  cancel: {
+    to: "both",
+    type: "DEAL_CANCELLED",
+    title: (d) => "Deal cancelled: " + d.title,
+    body: (d) => d.lastNote || "This deal was cancelled. The job is open again.",
+    cta: "Open the deal",
+  },
+};
+
+function dealEmailHtml({ recipientName, title, body, cta, dealId }) {
+  return (
+    '<div style="font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;max-width:560px">' +
+    '<div style="background:#0f4a80;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0">' +
+    '<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.75">NaijaArtisans</div>' +
+    '<div style="font-size:18px;font-weight:800;margin-top:2px">' + esc(title) + "</div></div>" +
+    '<div style="border:1px solid #e2e8f0;border-top:0;border-radius:0 0 10px 10px;padding:20px">' +
+    '<p style="margin:0 0 14px;color:#334155;font-size:14px;line-height:1.55">Hi ' +
+    esc(recipientName || "there") + ",</p>" +
+    '<p style="margin:0 0 18px;color:#334155;font-size:14px;line-height:1.55">' + esc(body) + "</p>" +
+    '<p style="margin:0"><a href="' + esc(abs("/dashboard#deal-" + dealId)) +
+    '" style="display:inline-block;background:#0f4a80;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700;font-size:14px">' +
+    esc(cta) + "</a></p></div></div>"
+  );
+}
+
+/**
+ * Notifies the other side of a deal that it moved.
+ *
+ * Never throws: a deal whose status changed must not be rolled back because an
+ * email bounced. The dedupeKey is (deal, event, recipient), so a retried request
+ * that re-applies the same transition cannot produce a second message.
+ *
+ * @param {object} deal a deal selected with DEAL_SELECT in src/lib/deals.js
+ * @param {"started"|"mark_done"|"confirm"|"dispute"|"cancel"} event
+ */
+export async function notifyDealEvent(deal, event) {
+  const spec = DEAL_EVENTS[event];
+  if (!spec) return { created: 0 };
+
+  try {
+    const recipients =
+      spec.to === "both"
+        ? [deal.customerId, deal.artisanId]
+        : [spec.to === "customer" ? deal.customerId : deal.artisanId];
+
+    const title = spec.title(deal);
+    const body = spec.body(deal);
+
+    await prisma.notification.createMany({
+      data: recipients.map((userId) => ({
+        userId,
+        type: spec.type,
+        title,
+        body,
+        url: "/dashboard#deal-" + deal.id,
+        jobRequestId: deal.jobRequestId || null,
+        dedupeKey: "deal:" + deal.id + ":" + event + ":" + userId,
+      })),
+      skipDuplicates: true,
+    });
+
+    const pending = await prisma.notification.findMany({
+      where: {
+        dedupeKey: { in: recipients.map((u) => "deal:" + deal.id + ":" + event + ":" + u) },
+        emailStatus: "PENDING",
+      },
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        url: true,
+        user: { select: { name: true, email: true } },
+      },
+    });
+
+    await deliverPending(pending, (n) =>
+      dealEmailHtml({
+        recipientName: n.user && n.user.name,
+        title: n.title,
+        body: n.body,
+        cta: spec.cta,
+        dealId: deal.id,
+      })
+    );
+
+    return { created: pending.length };
+  } catch (e) {
+    console.error("[notifications] notifyDealEvent failed:", e);
+    return { created: 0 };
+  }
+}
+
 /**
  * Retry path for emails that failed or were never attempted (a Resend outage, a
  * function timeout mid-fan-out). Safe to call repeatedly and safe to wire to a

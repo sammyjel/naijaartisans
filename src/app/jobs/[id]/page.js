@@ -6,6 +6,7 @@ import ShareButtons from "@/components/ShareButtons";
 import ReviewForm from "@/components/ReviewForm";
 import JobStatusToggle from "@/components/JobStatusToggle";
 import JobQuotePanel from "@/components/JobQuotePanel";
+import AcceptQuoteButton from "@/components/AcceptQuoteButton";
 import JsonLd from "@/components/JsonLd";
 import { naira, timeAgo } from "@/lib/format";
 import { SITE, breadcrumbLd } from "@/lib/seo";
@@ -38,8 +39,13 @@ export default async function JobDetailPage({ params }) {
         customer: { select: { id: true, name: true, city: true } },
         quotes: {
           orderBy: { createdAt: "desc" },
-          include: { artisan: { select: { id: true, name: true, city: true, phone: true, email: true } } },
+          include: {
+            artisan: { select: { id: true, name: true, city: true, phone: true, email: true } },
+            deal: { select: { id: true, status: true } },
+          },
         },
+        // Loaded with the job rather than per quote: one query, not one per card.
+        deals: { select: { id: true, status: true, artisanId: true } },
       },
     }),
   ]);
@@ -48,6 +54,11 @@ export default async function JobDetailPage({ params }) {
 
   const isOwner = user?.id === job.customerId;
   const quotedArtisanIds = job.quotes.map((q) => q.artisan.id);
+
+  // A job may only have one deal running at a time. While one does, the other
+  // quotes must not offer a "Hire" button that the API would reject anyway.
+  const activeDeal = job.deals.find((d) => d.status === "IN_PROGRESS" || d.status === "AWAITING_CONFIRMATION");
+  const completedDeal = job.deals.find((d) => d.status === "COMPLETED");
 
   const jobLd = {
     "@context": "https://schema.org",
@@ -105,9 +116,11 @@ export default async function JobDetailPage({ params }) {
             <h2 className="text-lg font-bold">Quotes ({job.quotes.length})</h2>
             {isOwner && job.quotes.length > 0 && (
               <div className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
-                {job.status === "CLOSED"
-                  ? "✅ Job done? Rate the artisans below — your review rewards great work and helps other customers."
-                  : "⭐ Hired one of these artisans? You can rate them below once the work is done."}
+                {completedDeal
+                  ? "✅ This job is complete. Rate the artisan below — your review is what other customers go on."
+                  : activeDeal
+                  ? "🔧 A transaction is in process. Track it and confirm completion from your dashboard."
+                  : "👇 Pick a quote and hire the artisan. That starts the transaction and tracks it to completion."}
               </div>
             )}
             <div className="mt-4 space-y-4">
@@ -131,8 +144,28 @@ export default async function JobDetailPage({ params }) {
                         {q.artisan.email && <a href={`mailto:${q.artisan.email}`} className="font-medium text-brand-700">✉️ Email</a>}
                       </div>
                     )}
-                    {/* Owner can rate the artisan after the transaction */}
-                    {isOwner && (
+                    {/* Hiring: only the owner, only while no deal is running. */}
+                    {isOwner && !q.deal && !activeDeal && !completedDeal && (
+                      <AcceptQuoteButton
+                        quoteId={q.id}
+                        artisanName={q.artisan.name}
+                        price={q.price}
+                      />
+                    )}
+                    {q.deal && (
+                      <p className="mt-3 text-sm font-semibold text-brand-700">
+                        {q.deal.status === "COMPLETED"
+                          ? "✅ Completed with this artisan"
+                          : q.deal.status === "CANCELLED"
+                          ? "Deal cancelled"
+                          : q.deal.status === "AWAITING_CONFIRMATION"
+                          ? "⏳ Says the work is done — confirm it on your dashboard"
+                          : "🔧 Transaction in process"}
+                      </p>
+                    )}
+
+                    {/* Rating is offered once the work is actually confirmed done. */}
+                    {isOwner && q.deal?.status === "COMPLETED" && (
                       <details className="mt-3 border-t border-gray-100 pt-3">
                         <summary className="cursor-pointer text-sm font-semibold text-brand-700">⭐ Rate {q.artisan.name.split(" ")[0]}</summary>
                         <div className="mt-3">

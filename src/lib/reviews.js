@@ -72,10 +72,38 @@ export async function findReviewableJob({ authorId, targetId }) {
 }
 
 /**
- * Whether the author may review the target, and why not if they may not.
+ * Finds a COMPLETED deal between the two that has not already been reviewed.
+ *
+ * This is the strongest proof the marketplace has that work actually happened:
+ * the artisan reported it done and the CUSTOMER confirmed it. A review attached
+ * to one of these is shown as "Verified job".
+ *
+ * Queried here rather than imported from src/lib/deals.js on purpose — that
+ * module pulls in the notification and email stack, and this file is imported by
+ * /browse, which has no business loading Resend.
  *
  * @param {{ authorId: string, targetId: string }} input
- * @returns {Promise<{ ok: true, job: {id:string,title:string,status:string} } | { ok: false, reason: string, status: number }>}
+ */
+export async function findCompletedDealFor({ authorId, targetId }) {
+  return prisma.deal.findFirst({
+    where: { customerId: authorId, artisanId: targetId, status: "COMPLETED", review: null },
+    orderBy: { completedAt: "desc" },
+    select: { id: true, title: true, completedAt: true, jobRequestId: true },
+  });
+}
+
+/**
+ * Whether the author may review the target, and why not if they may not.
+ *
+ * Two tiers, deliberately. A confirmed deal is the real signal and is marked
+ * verified. Having merely been quoted still qualifies, because tightening
+ * eligibility to deals alone would silently block every customer who dealt with
+ * an artisan before deals existed — a marketplace with zero reviews cannot
+ * afford to reject genuine ones on a technicality. The difference is surfaced
+ * as a badge rather than hidden as a rejection.
+ *
+ * @param {{ authorId: string, targetId: string }} input
+ * @returns {Promise<{ ok: true, verified: boolean, deal: object|null, job: object|null } | { ok: false, reason: string, status: number }>}
  */
 export async function checkReviewEligibility({ authorId, targetId }) {
   if (authorId === targetId) {
@@ -94,6 +122,16 @@ export async function checkReviewEligibility({ authorId, targetId }) {
     };
   }
 
+  const deal = await findCompletedDealFor({ authorId, targetId });
+  if (deal) {
+    return {
+      ok: true,
+      verified: true,
+      deal,
+      job: deal.jobRequestId ? { id: deal.jobRequestId, title: deal.title } : null,
+    };
+  }
+
   const job = await findReviewableJob({ authorId, targetId });
   if (!job) {
     return {
@@ -104,7 +142,7 @@ export async function checkReviewEligibility({ authorId, targetId }) {
     };
   }
 
-  return { ok: true, job };
+  return { ok: true, verified: false, deal: null, job };
 }
 
 /**
@@ -113,12 +151,12 @@ export async function checkReviewEligibility({ authorId, targetId }) {
  * Both writes go in one transaction: a review that exists while the aggregate
  * still says "New artisan" would be a visible inconsistency on /browse.
  *
- * @param {{ authorId: string, targetId: string, rating: number, comment: string|null, jobRequestId: string|null }} input
+ * @param {{ authorId: string, targetId: string, rating: number, comment: string|null, jobRequestId: string|null, dealId?: string|null }} input
  */
-export async function createReview({ authorId, targetId, rating, comment, jobRequestId }) {
+export async function createReview({ authorId, targetId, rating, comment, jobRequestId, dealId }) {
   const review = await prisma.$transaction(async (tx) => {
     const created = await tx.review.create({
-      data: { authorId, targetId, rating, comment, jobRequestId, isDemo: false },
+      data: { authorId, targetId, rating, comment, jobRequestId, dealId: dealId || null, isDemo: false },
       include: { author: { select: { id: true, name: true } } },
     });
 
@@ -140,6 +178,8 @@ export async function createReview({ authorId, targetId, rating, comment, jobReq
     targetId,
     rating,
     fromJob: jobRequestId || null,
+    fromDeal: dealId || null,
+    verified: Boolean(dealId),
   });
 
   return review;

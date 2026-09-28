@@ -8,24 +8,24 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL") // pooled connection (used at runtime)
-  directUrl = env("DIRECT_URL")   // direct connection (used for migrations / db push)
+  directUrl = env("DIRECT_URL") // direct connection (used for migrations / db push)
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?  @unique
-  phone     String?  @unique
-  password  String
-  role      String   @default("CUSTOMER") // CUSTOMER | ARTISAN
-  city      String?
-  bio       String?
-  avatarUrl String?
+  id          String   @id @default(cuid())
+  name        String
+  email       String?  @unique
+  phone       String?  @unique
+  password    String
+  role        String   @default("CUSTOMER") // CUSTOMER | ARTISAN
+  city        String?
+  bio         String?
+  avatarUrl   String?
   galleryUrls String[] @default([]) // artisan work / portfolio photos
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
   /// Maintained by Prisma on every write. Exists so the sitemap can publish a
   /// truthful <lastmod> for /artisans/<id> instead of inventing "now".
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   /// Denormalised review aggregates, recomputed by recomputeArtisanRating() in
   /// src/lib/reviews.js whenever a review is written. /browse renders one card per
@@ -36,6 +36,16 @@ model User {
   /// seeded staging database can never show an inflated public rating.
   ratingAverage Float?
   reviewCount   Int    @default(0)
+
+  /// Deals this artisan finished AND the customer confirmed. Denormalised for
+  /// the same reason as reviewCount: /browse renders up to 60 cards, and an
+  /// aggregate per card would be 60 extra queries.
+  ///
+  /// CUSTOMER-CONFIRMED ONLY. An artisan marking their own work done moves the
+  /// deal to AWAITING_CONFIRMATION, which is not counted here. That is the whole
+  /// point of the number: the artisan cannot award it to themselves.
+  /// Recomputed by recomputeCompletedDeals() in src/lib/deals.js on every change.
+  completedDealCount Int @default(0)
 
   // Monetization & growth
   featuredUntil DateTime? // artisan shows at the top with a badge while in the future
@@ -54,17 +64,20 @@ model User {
   resetTokenHash   String?
   resetTokenExpiry DateTime?
 
-  services     Service[]
-  jobRequests  JobRequest[] @relation("CustomerJobs")
-  quotes       Quote[]
-  reviewsGiven Review[]     @relation("ReviewAuthor")
-  reviewsGot   Review[]     @relation("ReviewTarget")
-  payments     Payment[]
+  services      Service[]
+  jobRequests   JobRequest[]   @relation("CustomerJobs")
+  quotes        Quote[]
+  reviewsGiven  Review[]       @relation("ReviewAuthor")
+  reviewsGot    Review[]       @relation("ReviewTarget")
+  payments      Payment[]
   /// Done-for-you orders placed by this user. Optional on the order side:
   /// buying does not require an account.
   serviceOrders ServiceOrder[] @relation("CustomerOrders")
 
   notifications Notification[]
+
+  dealsAsCustomer Deal[] @relation("CustomerDeals")
+  dealsAsArtisan  Deal[] @relation("ArtisanDeals")
 
   referredBy User?  @relation("Referrals", fields: [referredById], references: [id])
   referrals  User[] @relation("Referrals")
@@ -106,7 +119,7 @@ model Service {
   city        String
   createdAt   DateTime @default(now())
   /// Source of <lastmod> for the /services/<category>/<city> money pages.
-  updatedAt   DateTime @updatedAt @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   artisan    User     @relation(fields: [artisanId], references: [id], onDelete: Cascade)
   artisanId  String
@@ -126,16 +139,24 @@ model JobRequest {
   description String
   city        String
   budget      Int?
-  status      String   @default("OPEN") // OPEN | CLOSED
+  /// OPEN            on the board, artisans may quote
+  /// IN_PROGRESS     a quote was accepted; a Deal is running
+  /// COMPLETED       the customer confirmed the work was done
+  /// CLOSED          withdrawn by the customer without a completed deal
+  ///
+  /// Only OPEN jobs are broadcast to artisans, so accepting a quote takes the
+  /// job off the alert list automatically.
+  status      String   @default("OPEN") // OPEN | IN_PROGRESS | COMPLETED | CLOSED
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
-  customer   User     @relation("CustomerJobs", fields: [customerId], references: [id], onDelete: Cascade)
-  customerId String
-  category   Category @relation(fields: [categoryId], references: [id])
-  categoryId String
-  quotes     Quote[]
-  reviews    Review[]
+  customer      User           @relation("CustomerJobs", fields: [customerId], references: [id], onDelete: Cascade)
+  customerId    String
+  category      Category       @relation(fields: [categoryId], references: [id])
+  categoryId    String
+  quotes        Quote[]
+  reviews       Review[]
+  deals         Deal[]
   notifications Notification[]
 
   @@index([categoryId])
@@ -157,6 +178,9 @@ model Quote {
   artisan      User       @relation(fields: [artisanId], references: [id], onDelete: Cascade)
   artisanId    String
 
+  /// Set once the customer accepts this quote.
+  deal Deal?
+
   @@unique([jobRequestId, artisanId])
 }
 
@@ -171,6 +195,13 @@ model Review {
   /// SetNull rather than Cascade — deleting a job must not erase an artisan's record.
   jobRequest   JobRequest? @relation(fields: [jobRequestId], references: [id], onDelete: SetNull)
   jobRequestId String?
+
+  /// The completed deal this review came out of, when there was one. A review
+  /// with a deal is rendered as "Verified job" — it is backed by work the
+  /// customer confirmed, not merely by contact. Nullable because a customer who
+  /// dealt with an artisan off-platform can still review them.
+  deal   Deal?   @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  dealId String? @unique
 
   /// TRUE only for synthetic rows created by `npm run seed:demo`. Demo reviews are
   /// excluded from ratingAverage/reviewCount and are labelled wherever they render,
@@ -248,10 +279,10 @@ model Notification {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model ServicePackage {
-  id      String @id @default(cuid())
-  slug    String @unique
-  title   String
-  summary String // one line, used on the catalogue card
+  id          String @id @default(cuid())
+  slug        String @unique
+  title       String
+  summary     String // one line, used on the catalogue card
   description String
 
   /// Free-text rather than a Category relation: those categories drive the
@@ -348,26 +379,95 @@ model ServicePayment {
 
   kind       String // DEPOSIT | BALANCE
   amountKobo Int
-  feeKobo    Int      @default(0)
-  status     String   @default("PENDING") // PENDING | PAID | FAILED
+  feeKobo    Int       @default(0)
+  status     String    @default("PENDING") // PENDING | PAID | FAILED
   paidAt     DateTime?
-  rawJson    String   @default("{}")
-  createdAt  DateTime @default(now())
+  rawJson    String    @default("{}")
+  createdAt  DateTime  @default(now())
 
   @@index([orderId])
 }
 
 model Delivery {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   order     ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId   String
   note      String?
-  fileUrls  String[] @default([])
+  fileUrls  String[]     @default([])
   /// False until the customer accepts it; a revision request flips it back.
-  accepted  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  accepted  Boolean      @default(false)
+  createdAt DateTime     @default(now())
 
   @@index([orderId])
+}
+
+/// A transaction between one customer and one artisan: the record of work being
+/// done, and the source of the public "X jobs completed" badge.
+///
+/// ── WHY THIS TABLE EXISTS ─────────────────────────────────────────────────
+///
+/// Before it, the marketplace could show that an artisan had been *contacted*
+/// (a quote) but never that they had *delivered*. A customer choosing between
+/// two plumbers had stars from nobody and no completion history, so the only
+/// available signal was who paid to be Featured.
+///
+/// ── WHY THE ARTISAN CANNOT COMPLETE THEIR OWN DEAL ────────────────────────
+///
+/// The artisan moves the deal to AWAITING_CONFIRMATION; only the customer can
+/// move it to COMPLETED, and only COMPLETED increments completedDealCount. The
+/// full reasoning, and the state machine itself, is in src/lib/deal-rules.js.
+model Deal {
+  id String @id @default(cuid())
+
+  /// The job this came out of. Nullable so a deal can later be opened without a
+  /// job posting; every deal today has one.
+  jobRequest   JobRequest? @relation(fields: [jobRequestId], references: [id], onDelete: SetNull)
+  jobRequestId String?
+
+  /// The accepted quote. One quote can only ever become one deal.
+  quote   Quote?  @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  quoteId String? @unique
+
+  customer   User   @relation("CustomerDeals", fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  artisan    User   @relation("ArtisanDeals", fields: [artisanId], references: [id], onDelete: Cascade)
+  artisanId  String
+
+  /// IN_PROGRESS | AWAITING_CONFIRMATION | COMPLETED | CANCELLED
+  status String @default("IN_PROGRESS")
+
+  /// What the two sides agreed, in naira, snapshotted from the quote. Matches
+  /// the units of Quote.price and JobRequest.budget (NOT kobo, unlike Payment).
+  agreedPrice Int?
+
+  /// A short description of the work, copied from the job at acceptance so the
+  /// deal still reads correctly if the job is later edited or deleted.
+  title String
+
+  startedAt   DateTime  @default(now())
+  /// When the artisan said the work was finished. Counts for nothing on its own.
+  workDoneAt  DateTime?
+  /// When the CUSTOMER confirmed. This is the timestamp the badge is built from.
+  completedAt DateTime?
+  cancelledAt DateTime?
+  /// "customer" or "artisan" — who called it off, for support conversations.
+  cancelledBy String?
+
+  /// Free-text note from whoever last moved the deal, shown to the other side.
+  lastNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review?
+
+  /// One deal per artisan per job: accepting the same quote twice must not
+  /// create a second completable deal, which would double-count the badge.
+  @@unique([jobRequestId, artisanId])
+  /// "my deals" for either side, and the completed-count recompute.
+  @@index([artisanId, status])
+  @@index([customerId, status])
+  @@index([status, completedAt])
 }
 
 // Marketing leads captured by the opt-in lead magnets (not full accounts yet).

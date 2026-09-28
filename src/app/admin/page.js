@@ -4,6 +4,7 @@ import AdminLogin from "@/components/AdminLogin";
 import AdminLogout from "@/components/AdminLogout";
 import AdminMapClient from "@/components/AdminMapClient";
 import JobBackfillPanel from "@/components/JobBackfillPanel";
+import AdminJobFollowUp from "@/components/AdminJobFollowUp";
 import { isFeatured } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +71,35 @@ export default async function AdminPage() {
   } catch {
     /* Payment table not migrated yet */
   }
+  // Jobs with the poster's contact details, so the owner can follow up on
+  // whether the work was actually satisfactory. Guarded — the Deal relation does
+  // not exist before the migration, and the rest of the dashboard must survive.
+  let followUpJobs = [];
+  try {
+    followUpJobs = await prisma.jobRequest.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      select: {
+        id: true, title: true, city: true, status: true, createdAt: true,
+        category: { select: { name: true } },
+        customer: { select: { id: true, name: true, phone: true, email: true } },
+        _count: { select: { quotes: true } },
+        // Newest deal per job. One query for the page, not one per row.
+        deals: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            id: true, status: true, completedAt: true,
+            artisan: { select: { id: true, name: true, phone: true } },
+          },
+        },
+      },
+    });
+    followUpJobs = followUpJobs.map((j) => ({ ...j, deal: j.deals[0] || null }));
+  } catch {
+    followUpJobs = [];
+  }
+
   // Marketing leads (guarded — Lead table may not exist before the migration).
   let leads = [];
   try {
@@ -98,6 +128,8 @@ export default async function AdminPage() {
         <Stat label="Joined this week" value={newThisWeek} accent="text-brand-600" />
         <Stat label={`Revenue (${paymentCount} paid)`} value={`₦${revenueNaira.toLocaleString("en-NG")}`} accent="text-green-700" />
       </div>
+
+      <AdminJobFollowUp jobs={followUpJobs} />
 
       <JobBackfillPanel />
 
