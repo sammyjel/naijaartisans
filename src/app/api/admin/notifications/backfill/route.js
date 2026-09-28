@@ -6,8 +6,10 @@
 // by any local process, so the send has to run here. The logic itself is shared
 // with scripts/backfill-job-alerts.mjs via src/lib/job-digest.js.
 //
-//   POST /api/admin/notifications/backfill            reports what it would do
-//   POST /api/admin/notifications/backfill { send: true }   actually sends
+//   POST .../backfill { kind: "jobs" }    open jobs -> every artisan
+//   POST .../backfill { kind: "quotes" }  unseen quotes -> the customer who posted
+//
+// Without `send: true` each one only reports what it would do.
 //
 // Auth: an admin session cookie, or a bearer token matching BACKFILL_TOKEN.
 // The token form is what makes this callable from a terminal without handing a
@@ -18,6 +20,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/admin";
 import { runJobBackfill } from "@/lib/job-digest";
+import { runQuoteBackfill } from "@/lib/quote-backfill";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -49,13 +52,16 @@ export async function POST(request) {
 
   const body = await request.json().catch(() => ({}));
   const lines = [];
+  // Defaults to "jobs" so the original call shape keeps working.
+  const kind = body.kind === "quotes" ? "quotes" : "jobs";
+  const run = kind === "quotes" ? runQuoteBackfill : runJobBackfill;
 
   try {
-    const result = await runJobBackfill(prisma, {
+    const result = await run(prisma, {
       send: body.send === true,
       log: (line) => lines.push(line),
     });
-    return NextResponse.json({ ok: true, ...result, log: lines });
+    return NextResponse.json({ ok: true, kind, ...result, log: lines });
   } catch (e) {
     console.error("backfill failed:", e);
     return NextResponse.json({ error: "Backfill failed.", detail: e.message, log: lines }, { status: 500 });

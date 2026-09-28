@@ -4,6 +4,7 @@ import AdminLogin from "@/components/AdminLogin";
 import AdminLogout from "@/components/AdminLogout";
 import AdminMapClient from "@/components/AdminMapClient";
 import JobBackfillPanel from "@/components/JobBackfillPanel";
+import QuoteBackfillPanel from "@/components/QuoteBackfillPanel";
 import AdminJobFollowUp from "@/components/AdminJobFollowUp";
 import { isFeatured } from "@/lib/format";
 
@@ -130,6 +131,8 @@ export default async function AdminPage() {
       </div>
 
       <AdminJobFollowUp jobs={followUpJobs} />
+
+      <QuoteBackfillPanel />
 
       <JobBackfillPanel />
 
