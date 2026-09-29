@@ -16,15 +16,23 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }) {
   const job = await prisma.jobRequest.findUnique({
     where: { id: params.id },
-    select: { title: true, city: true, description: true, category: { select: { name: true } } },
+    select: { title: true, city: true, status: true, description: true, category: { select: { name: true } } },
   });
   if (!job) return { title: "Job not found" };
   const title = `${job.title} — ${job.category.name} job in ${job.city}`;
   const description = (job.description || `Open ${job.category.name.toLowerCase()} job in ${job.city}. Send a quote on NaijaArtisans.`).slice(0, 160);
+  const isOpen = job.status === "OPEN";
   return {
-    title,
+    title: isOpen ? title : `${title} (filled)`,
     description,
     alternates: { canonical: `/jobs/${params.id}` },
+    // A job that has been hired for or completed is no longer a vacancy. Google's
+    // job-posting guidelines want expired postings out of the index, and leaving
+    // them in earns "expired job posting" warnings that can cost the rich result
+    // across the WHOLE site, not just the stale page. The page stays reachable —
+    // its quotes and outcome are useful to anyone who has the link — it simply
+    // stops advertising itself as open work.
+    robots: isOpen ? undefined : { index: false, follow: true },
     openGraph: { title: `${title} | NaijaArtisans`, description, type: "article" },
   };
 }
@@ -60,26 +68,44 @@ export default async function JobDetailPage({ params }) {
   const activeDeal = job.deals.find((d) => d.status === "IN_PROGRESS" || d.status === "AWAITING_CONFIRMATION");
   const completedDeal = job.deals.find((d) => d.status === "COMPLETED");
 
-  const jobLd = {
-    "@context": "https://schema.org",
-    "@type": "JobPosting",
-    title: job.title,
-    description: job.description,
-    datePosted: new Date(job.createdAt).toISOString(),
-    employmentType: "CONTRACTOR",
-    hiringOrganization: { "@type": "Organization", name: "NaijaArtisans", sameAs: SITE.url },
-    jobLocation: {
-      "@type": "Place",
-      address: { "@type": "PostalAddress", addressLocality: job.city, addressCountry: "NG" },
-    },
-    ...(job.budget
-      ? { baseSalary: { "@type": "MonetaryAmount", currency: "NGN", value: { "@type": "QuantitativeValue", value: job.budget } } }
-      : {}),
-  };
+  // JobPosting markup is emitted ONLY while the job is genuinely open.
+  //
+  // Once a quote is accepted the job becomes IN_PROGRESS and then COMPLETED, and
+  // structured data still claiming an open vacancy is what Google reports as an
+  // expired job posting. Before deals existed this barely happened — one job had
+  // ever been closed — so every job page could safely carry the markup. Now a
+  // job changes status every time somebody is hired, which makes this the normal
+  // case rather than the edge case.
+  //
+  // validThrough is included so Google can expire the posting on its own if our
+  // status change and its next crawl do not line up.
+  const VACANCY_DAYS = 45;
+  const jobLd =
+    job.status === "OPEN"
+      ? {
+          "@context": "https://schema.org",
+          "@type": "JobPosting",
+          title: job.title,
+          description: job.description,
+          datePosted: new Date(job.createdAt).toISOString(),
+          validThrough: new Date(
+            new Date(job.createdAt).getTime() + VACANCY_DAYS * 86400000
+          ).toISOString(),
+          employmentType: "CONTRACTOR",
+          hiringOrganization: { "@type": "Organization", name: "NaijaArtisans", sameAs: SITE.url },
+          jobLocation: {
+            "@type": "Place",
+            address: { "@type": "PostalAddress", addressLocality: job.city, addressCountry: "NG" },
+          },
+          ...(job.budget
+            ? { baseSalary: { "@type": "MonetaryAmount", currency: "NGN", value: { "@type": "QuantitativeValue", value: job.budget } } }
+            : {}),
+        }
+      : null;
 
   return (
     <div className="container-page py-8">
-      <JsonLd data={jobLd} />
+      {jobLd && <JsonLd data={jobLd} />}
       <JsonLd
         data={breadcrumbLd([
           { name: "Home", url: "/" },
