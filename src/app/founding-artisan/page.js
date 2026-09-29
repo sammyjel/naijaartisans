@@ -4,7 +4,7 @@ import JsonLd from "@/components/JsonLd";
 import { breadcrumbLd } from "@/lib/seo";
 
 export const metadata = {
-  title: "Founding Artisan — Get free job leads near you | NaijaArtisans",
+  title: "Founding Artisan — Get free job leads near you",
   description:
     "Join the first 100 Founding Artisans on NaijaArtisans. Get free job leads near you, 30 days of Featured placement free, and our guide to getting more customers without ad spend.",
   alternates: { canonical: "/founding-artisan" },

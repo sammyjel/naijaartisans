@@ -43,7 +43,7 @@ export function generateMetadata({ params }) {
   const guide = getGuide(params.slug);
   if (!guide) return { title: "Guide not found" };
   return {
-    title: `${guide.title} | NaijaArtisans`,
+    title: `${guide.title}`,
     description: guide.description,
     alternates: { canonical: `/guides/${guide.slug}` },
     openGraph: { title: guide.title, description: guide.description, type: "article" },

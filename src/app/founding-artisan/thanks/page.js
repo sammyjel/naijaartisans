@@ -3,7 +3,7 @@ import ShareButtons from "@/components/ShareButtons";
 import { SITE } from "@/lib/seo";
 
 export const metadata = {
-  title: "You're in — Founding Artisan | NaijaArtisans",
+  title: "You're in — Founding Artisan",
   robots: { index: false, follow: false },
 };
 

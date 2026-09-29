@@ -4,7 +4,7 @@ import JsonLd from "@/components/JsonLd";
 import { breadcrumbLd } from "@/lib/seo";
 
 export const metadata = {
-  title: "Free No-Wahala Hiring Kit — hire artisans without getting scammed | NaijaArtisans",
+  title: "Free No-Wahala Hiring Kit — hire artisans without getting scammed",
   description:
     "Get the free No-Wahala Hiring Kit: 7 questions that stop artisans from scamming you, plus a fair-price guide for common jobs in Nigeria. Hire with confidence.",
   alternates: { canonical: "/hiring-kit" },

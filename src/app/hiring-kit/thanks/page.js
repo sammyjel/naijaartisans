@@ -3,7 +3,7 @@ import ShareButtons from "@/components/ShareButtons";
 import { SITE } from "@/lib/seo";
 
 export const metadata = {
-  title: "Your No-Wahala Hiring Kit | NaijaArtisans",
+  title: "Your No-Wahala Hiring Kit",
   robots: { index: false, follow: false },
 };
 

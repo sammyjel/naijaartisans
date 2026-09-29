@@ -4,7 +4,7 @@ import { allGuides } from "@/lib/guides";
 import { breadcrumbLd } from "@/lib/seo";
 
 export const metadata = {
-  title: "Hiring Guides — Prices, Tips & Checklists for Nigeria | NaijaArtisans",
+  title: "Hiring Guides — Prices, Tips & Checklists for Nigeria",
   description:
     "Free, practical guides to hiring artisans in Nigeria — fair prices for 2026, the right questions to ask, and how to avoid getting scammed. Plumbing, electrical, AC, tailoring and more.",
   alternates: { canonical: "/guides" },
