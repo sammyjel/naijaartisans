@@ -4,6 +4,8 @@ import JobsFilters from "@/components/JobsFilters";
 import JsonLd from "@/components/JsonLd";
 import { naira, timeAgo } from "@/lib/format";
 import { breadcrumbLd } from "@/lib/seo";
+import { getCachedCategories, getCachedJobBoard } from "@/lib/cached-queries";
+import { isUnfiltered } from "@/lib/cache-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -29,17 +31,21 @@ export default async function JobsPage({ searchParams }) {
   if (category) where.category = { slug: category };
   if (city) where.city = city;
 
+  // Unfiltered board is served from cache; see src/lib/cache-policy.js for why.
+  const plain = isUnfiltered({ category, city }, ["category", "city"]);
   const [categories, jobs] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
-    prisma.jobRequest.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        category: true,
-        customer: { select: { id: true, name: true, city: true } },
-        _count: { select: { quotes: true } },
-      },
-    }),
+    getCachedCategories(),
+    plain
+      ? getCachedJobBoard()
+      : prisma.jobRequest.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          include: {
+            category: true,
+            customer: { select: { id: true, name: true, city: true } },
+            _count: { select: { quotes: true } },
+          },
+        }),
   ]);
 
   return (

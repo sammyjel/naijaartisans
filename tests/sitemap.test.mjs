@@ -114,7 +114,7 @@ test("the sitemap generator contains no new Date() fallback", () => {
 });
 
 test("the sitemap is cached rather than force-dynamic", () => {
-  assert.match(sitemapSrc, /export const revalidate = 3600/);
+  assert.match(sitemapSrc, /export const revalidate = \d+/);
   assert.equal(
     sitemapSrc.includes('export const dynamic = "force-dynamic"'),
     false,

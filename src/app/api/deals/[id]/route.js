@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { applyDealAction, getDealForUser } from "@/lib/deals";
 import { availableActions, DEAL_ACTIONS } from "@/lib/deal-rules";
+import { revalidateFor } from "@/lib/cached-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,10 @@ export async function PATCH(request, { params }) {
     note: body.note,
   });
   if (!result.ok) return NextResponse.json({ error: result.reason }, { status: result.status });
+
+  // A confirmed completion moves the badge on the profile and the browse card,
+  // and a cancellation puts the job back on the board.
+  revalidateFor("deal", [`/artisans/${result.deal.artisanId}`, "/browse", "/jobs"]);
 
   return NextResponse.json({
     deal: {

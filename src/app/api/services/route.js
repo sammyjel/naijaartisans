@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { revalidateFor } from "@/lib/cached-queries";
 
 // GET /api/services?category=plumbing&city=Lagos&q=pipe
 export async function GET(request) {
@@ -56,6 +57,16 @@ export async function POST(request) {
     data: { title, description, city, categoryId, priceMin, priceMax, artisanId: user.id },
     include: { category: true },
   });
+
+  // Busts the listing caches AND the rendered pages this service now belongs
+  // on. Without the paths a new artisan would be invisible for up to a day.
+  revalidateFor("service", [
+    "/browse",
+    "/services",
+    `/services/${category.slug}`,
+    `/artisans/${user.id}`,
+    "/sitemap.xml",
+  ]);
 
   return NextResponse.json({ service }, { status: 201 });
 }

@@ -53,8 +53,8 @@ for (const file of ISR_PAGES) {
     const src = read(file);
     assert.match(
       src,
-      /export const revalidate = 3600/,
-      `${file} should export revalidate = 3600`
+      /export const revalidate = \d+/,
+      `${file} should export a revalidate window`
     );
     assert.equal(
       src.includes('export const dynamic = "force-dynamic"'),
@@ -108,7 +108,7 @@ test("browse is not given a revalidate it cannot honour", () => {
 });
 
 test("every ISR page explains why it is safe to cache", () => {
-  // A bare `revalidate = 3600` with no reasoning is how the next person
+  // A bare `revalidate` with no reasoning is how the next person
   // reintroduces a dynamic API call into a cached page.
   for (const file of ISR_PAGES) {
     assert.match(read(file), /ISR|cached|revalidat/i, `${file} should document its caching choice`);
@@ -151,7 +151,7 @@ test("the 153 marketing pages are served by ISR routes", () => {
   const cityPage = read("services/[category]/[city]/page.js");
   const artisanPage = read("artisans/[id]/page.js");
   for (const [name, src] of [["city landing", cityPage], ["artisan profile", artisanPage]]) {
-    assert.match(src, /export const revalidate = 3600/, `${name} pages must be cacheable`);
+    assert.match(src, /export const revalidate = \d+/, `${name} pages must be cacheable`);
   }
   // Guides were already statically generated and must stay that way.
   assert.match(

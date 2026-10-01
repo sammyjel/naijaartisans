@@ -14,7 +14,7 @@ import { SITE, breadcrumbLd } from "@/lib/seo";
 // force-dynamic, which is why production served Cache-Control: no-store and
 // missed the CDN on every request. An hour-old artisan list is fine here; a
 // 700ms origin round trip from Nigeria to us-east on every visit was not.
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 // generateStaticParams is REQUIRED here, not optional.
 //
@@ -31,9 +31,28 @@ export const revalidate = 3600;
 // time, returning [] means every page is generated on demand and cached on
 // first hit, rather than failing the deploy. Nothing incorrect gets cached,
 // because nothing is prerendered.
+/**
+ * Bounded on purpose. Every id returned here is a page RENDERED at build time,
+ * and every render is its own database query — so this number is the build's
+ * cost against the Neon compute allowance, not just a list length.
+ *
+ * At 51 artisans the cap changes nothing today; it exists so a future bulk
+ * import cannot turn one deploy into thousands of build-time queries. Ids left
+ * out are not lost — dynamicParams is on by default, so they render on first
+ * request and then cache like any other page.
+ */
+const PRERENDER_MAX = Number(process.env.PRERENDER_MAX || 100);
+
 export async function generateStaticParams() {
   try {
-    const artisans = await prisma.user.findMany({ where: { role: "ARTISAN" }, select: { id: true } });
+    const artisans = await prisma.user.findMany({
+      where: { role: "ARTISAN" },
+      // Most recently active first, so the cap keeps the pages most likely to
+      // be visited rather than an arbitrary slice.
+      orderBy: { updatedAt: "desc" },
+      take: PRERENDER_MAX,
+      select: { id: true },
+    });
     return artisans.map((a) => ({ id: a.id }));
   } catch (e) {
     console.error("[artisans/[id]] generateStaticParams failed, falling back to on-demand:", e);

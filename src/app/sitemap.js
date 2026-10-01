@@ -10,7 +10,7 @@ const BASE = SITE_URL;
 // never fail a deploy — but cached for an hour afterwards. Crawlers hit this far
 // more often than the data changes, and it was previously running its queries on
 // every single request.
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 // ── lastmod policy ─────────────────────────────────────────────────────────
 //

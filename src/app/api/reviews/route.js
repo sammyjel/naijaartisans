@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { checkReviewEligibility, createReview } from "@/lib/reviews";
+import { revalidateFor } from "@/lib/cached-queries";
 
 // GET /api/reviews?targetId=... - may the current user review this artisan?
 //
@@ -71,6 +72,7 @@ export async function POST(request) {
       // to render "Verified job", so it must never be filled in speculatively.
       dealId: verdict.deal ? verdict.deal.id : null,
     });
+    revalidateFor("review", [`/artisans/${targetId}`, "/browse"]);
     return NextResponse.json({ review }, { status: 201 });
   } catch (err) {
     // The unique index is the real duplicate guard; checkReviewEligibility above

@@ -12,6 +12,8 @@ import { SITE, breadcrumbLd } from "@/lib/seo";
 import { allGuides } from "@/lib/guides";
 import { CITIES } from "@/lib/constants";
 import { reviewExcerptsByArtisan } from "@/lib/reviews";
+import { getCachedCategories, getCachedServices } from "@/lib/cached-queries";
+import { isUnfiltered } from "@/lib/cache-policy";
 
 // STAYS DYNAMIC ON PURPOSE. This page reads searchParams (category, city, q, lat,
 // lng), which already opts it out of static rendering, so adding a `revalidate`
@@ -53,28 +55,36 @@ export async function generateMetadata({ searchParams }) {
 export default async function BrowsePage({ searchParams }) {
   const { category = "", city = "", q = "", lat = "", lng = "" } = searchParams;
   const hasGeo = Boolean(lat && lng);
+
+  // The unfiltered listing — what crawlers and most visitors load — is served
+  // from cache so it costs no database round trip. Filtered views stay live:
+  // their result space is unbounded, and caching one entry per
+  // category/city/query combination would fill the cache with single-use rows
+  // while doing nothing about the crawler traffic that exhausted the quota.
+  //
+  // Artisan columns on the cached path come from BROWSE_ARTISAN_SELECT in
+  // cached-queries.js and must stay in step with the select below. Both are
+  // trust signals (stars, completed jobs) kept as denormalised columns
+  // precisely so 60 cards cost no extra queries.
+  const plain = isUnfiltered({ category, city, q, lat, lng });
   const [categories, services] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
-    prisma.service.findMany({
-      where: buildWhere({ category, city, q }),
-      orderBy: { createdAt: "desc" },
-      include: {
-        category: true,
-        artisan: {
-          select: {
-            id: true, name: true, city: true, featuredUntil: true, latitude: true, longitude: true,
-            // Trust signals. ratingAverage and reviewCount are plain columns kept
-            // up to date on review write (src/lib/reviews.js), so putting a rating
-            // on all 60 cards costs zero extra queries — which is the entire
-            // reason they are denormalised rather than aggregated per card.
-            avatarUrl: true, ratingAverage: true, reviewCount: true,
-            // Same reasoning as the two above: a stored counter, so 60 cards
-            // cost no extra queries. Counts only customer-confirmed deals.
-            completedDealCount: true,
+    getCachedCategories(),
+    plain
+      ? getCachedServices()
+      : prisma.service.findMany({
+          where: buildWhere({ category, city, q }),
+          orderBy: { createdAt: "desc" },
+          include: {
+            category: true,
+            artisan: {
+              select: {
+                id: true, name: true, city: true, featuredUntil: true, latitude: true, longitude: true,
+                avatarUrl: true, ratingAverage: true, reviewCount: true,
+                completedDealCount: true,
+              },
+            },
           },
-        },
-      },
-    }),
+        }),
   ]);
 
   // When "near me" is active, sort by distance; otherwise featured-first.

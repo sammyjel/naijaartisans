@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { acceptQuote, listDealsForUser } from "@/lib/deals";
 import { availableActions } from "@/lib/deal-rules";
+import { revalidateFor } from "@/lib/cached-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,9 @@ export async function POST(request) {
 
   const result = await acceptQuote({ quoteId, userId: user.id });
   if (!result.ok) return NextResponse.json({ error: result.reason }, { status: result.status });
+
+  // Hiring moves the job off the open board and changes nothing else public.
+  revalidateFor("deal", ["/jobs", "/sitemap.xml"]);
 
   return NextResponse.json(
     { deal: { ...result.deal, you: "customer", actions: availableActions(result.deal, user.id) } },

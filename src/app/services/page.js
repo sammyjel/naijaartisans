@@ -9,7 +9,7 @@ import { SITE, breadcrumbLd } from "@/lib/seo";
 // force-dynamic, which is why production served Cache-Control: no-store and
 // missed the CDN on every request. An hour-old artisan list is fine here; a
 // 700ms origin round trip from Nigeria to us-east on every visit was not.
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 export async function generateMetadata() {
   return {

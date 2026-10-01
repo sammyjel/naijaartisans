@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { notifyArtisansOfJob } from "@/lib/notifications";
 import { track } from "@/lib/metrics";
+import { revalidateFor } from "@/lib/cached-queries";
 
 // GET /api/jobs?category=plumbing&city=Lagos&mine=1
 export async function GET(request) {
@@ -58,6 +59,9 @@ export async function POST(request) {
   });
 
   track("job_posted", { jobId: job.id, categoryId, city, hasBudget: Boolean(budget) });
+
+  // The day-long page TTL is only affordable because writes bust the cache.
+  revalidateFor("job", ["/jobs", "/sitemap.xml"]);
 
   // Notify matching artisans. Deliberately AFTER the create above and outside any
   // transaction: a notification must never go out for a job that failed to save.
