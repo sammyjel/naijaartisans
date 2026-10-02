@@ -79,6 +79,8 @@ model User {
   dealsAsCustomer Deal[] @relation("CustomerDeals")
   dealsAsArtisan  Deal[] @relation("ArtisanDeals")
 
+  attributions Attribution[]
+
   referredBy User?  @relation("Referrals", fields: [referredById], references: [id])
   referrals  User[] @relation("Referrals")
 
@@ -468,6 +470,100 @@ model Deal {
   @@index([artisanId, status])
   @@index([customerId, status])
   @@index([status, completedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MARKETING  —  which content actually sends people to NaijaArtisans.
+//
+// ── THE DESIGN DECISION THAT MATTERS ────────────────────────────────────────
+//
+// Nothing is written on a VISIT. Only on a CONVERSION.
+//
+// The obvious build is a row per visit, and it would have taken the site down
+// again. On 2026-10-01 Neon's compute quota was exhausted because pages woke the
+// database continuously; a write on every pageview — crawlers included, and this
+// site has 174 indexed URLs — is that same failure with a different name, and it
+// would undo the caching added to fix it.
+//
+// So a visitor's campaign tags ride in a cookie, costing nothing, and are
+// written here only when they do something worth money. The trade is honest:
+// we lose "how many people visited from Facebook" (Vercel Analytics and Search
+// Console already answer that) and we keep "which post produced a customer",
+// which is the question the whole system exists to answer.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A marketing campaign: one asset, many tagged links and posts.
+model Campaign {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique /// also the utm_campaign value
+
+  /// TRAFFIC | AWARENESS | DISCOVERY | LEADS | DEALS
+  objective String @default("TRAFFIC")
+
+  /// Where tagged links point by default, e.g. "/browse".
+  destination String @default("/")
+
+  /// NIGERIA | DIASPORA | ARTISANS | CUSTOMERS — see src/lib/utm.js.
+  audience String @default("NIGERIA")
+
+  status   String    @default("DRAFT") // DRAFT | ACTIVE | PAUSED | ENDED
+  startsAt DateTime?
+  endsAt   DateTime?
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attributions Attribution[]
+
+  @@index([status, createdAt])
+}
+
+/// One conversion, with the campaign that produced it.
+///
+/// `userId` is nullable because a lead magnet opt-in has no account behind it.
+/// SetNull rather than Cascade: deleting a user must not erase the record that
+/// a campaign worked, which is the only durable evidence of what marketing did.
+model Attribution {
+  id String @id @default(cuid())
+
+  /// signup | lead_captured | job_posted | quote_sent | deal_started | deal_completed
+  conversion String
+
+  /// Resolved campaign, when the tags matched one we know about. Null for
+  /// untagged traffic, which is most of it and is recorded honestly as such.
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignId String?
+
+  /// The tags exactly as they arrived, kept even when no Campaign matched —
+  /// otherwise a link tagged with a typo becomes invisible rather than
+  /// debuggable.
+  source      String @default("direct")
+  medium      String @default("none")
+  campaignTag String @default("")
+  content     String @default("")
+  term        String @default("")
+
+  /// First page of the visit that eventually converted.
+  landingPath    String?
+  /// Where the conversion itself happened.
+  conversionPath String?
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+
+  /// What was created, e.g. a JobRequest or Deal id. Free text because it spans
+  /// several tables and a real foreign key per type would be six nullable columns.
+  subjectType String?
+  subjectId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversion, createdAt])
+  @@index([campaignId, conversion])
+  @@index([source, medium])
+  @@index([createdAt])
 }
 
 // Marketing leads captured by the opt-in lead magnets (not full accounts yet).

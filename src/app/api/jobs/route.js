@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { notifyArtisansOfJob } from "@/lib/notifications";
 import { track } from "@/lib/metrics";
 import { revalidateFor } from "@/lib/cached-queries";
+import { recordConversion } from "@/lib/attribution";
 
 // GET /api/jobs?category=plumbing&city=Lagos&mine=1
 export async function GET(request) {
@@ -62,6 +63,15 @@ export async function POST(request) {
 
   // The day-long page TTL is only affordable because writes bust the cache.
   revalidateFor("job", ["/jobs", "/sitemap.xml"]);
+
+  // Never throws — a job that saved must not fail because a marketing row did.
+  await recordConversion({
+    conversion: "job_posted",
+    userId: user.id,
+    subjectType: "JobRequest",
+    subjectId: job.id,
+    conversionPath: "/post-job",
+  });
 
   // Notify matching artisans. Deliberately AFTER the create above and outside any
   // transaction: a notification must never go out for a job that failed to save.

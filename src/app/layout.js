@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { Analytics } from "@vercel/analytics/react";
+import CampaignTracker from "@/components/CampaignTracker";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import ChatWidget from "@/components/ChatWidget";
 import { organizationLd, websiteLd, SITE_URL } from "@/lib/seo";
@@ -158,6 +159,10 @@ export default function RootLayout({ children }) {
         <ChatWidget />
         <ServiceWorkerRegister />
         <Analytics />
+        {/* Writes campaign tags to a cookie in the browser. Deliberately not
+            middleware: middleware runs per request and would opt the 141 ISR
+            pages back out of static rendering. */}
+        <CampaignTracker />
       </body>
     </html>
   );

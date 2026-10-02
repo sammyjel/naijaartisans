@@ -6,6 +6,7 @@ import AdminMapClient from "@/components/AdminMapClient";
 import JobBackfillPanel from "@/components/JobBackfillPanel";
 import QuoteBackfillPanel from "@/components/QuoteBackfillPanel";
 import AdminJobFollowUp from "@/components/AdminJobFollowUp";
+import MarketingHub from "@/components/MarketingHub";
 import { isFeatured } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -129,6 +130,8 @@ export default async function AdminPage() {
         <Stat label="Joined this week" value={newThisWeek} accent="text-brand-600" />
         <Stat label={`Revenue (${paymentCount} paid)`} value={`₦${revenueNaira.toLocaleString("en-NG")}`} accent="text-green-700" />
       </div>
+
+      <MarketingHub />
 
       <AdminJobFollowUp jobs={followUpJobs} />
 

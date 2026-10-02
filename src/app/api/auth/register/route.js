@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordConversion } from "@/lib/attribution";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setAuthCookie } from "@/lib/auth";
 
@@ -100,6 +101,18 @@ export async function POST(request) {
     }
 
     setAuthCookie(user.id);
+
+    // Which campaign brought this account. Recorded for artisans and customers
+    // alike — an artisan signing up is a real marketing outcome on a
+    // marketplace, where supply is as hard to acquire as demand.
+    await recordConversion({
+      conversion: "signup",
+      userId: user.id,
+      subjectType: "User",
+      subjectId: user.id,
+      conversionPath: "/register",
+    });
+
     return NextResponse.json({ user }, { status: 201 });
   } catch (err) {
     console.error("register error", err);

@@ -12,6 +12,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { acceptQuote, listDealsForUser } from "@/lib/deals";
 import { availableActions } from "@/lib/deal-rules";
 import { revalidateFor } from "@/lib/cached-queries";
+import { recordConversion } from "@/lib/attribution";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,14 @@ export async function POST(request) {
 
   // Hiring moves the job off the open board and changes nothing else public.
   revalidateFor("deal", ["/jobs", "/sitemap.xml"]);
+
+  await recordConversion({
+    conversion: "deal_started",
+    userId: user.id,
+    subjectType: "Deal",
+    subjectId: result.deal.id,
+    conversionPath: "/dashboard",
+  });
 
   return NextResponse.json(
     { deal: { ...result.deal, you: "customer", actions: availableActions(result.deal, user.id) } },

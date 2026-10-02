@@ -11,6 +11,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { applyDealAction, getDealForUser } from "@/lib/deals";
 import { availableActions, DEAL_ACTIONS } from "@/lib/deal-rules";
 import { revalidateFor } from "@/lib/cached-queries";
+import { recordConversion } from "@/lib/attribution";
+import { COMPLETED } from "@/lib/deal-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +58,20 @@ export async function PATCH(request, { params }) {
   // A confirmed completion moves the badge on the profile and the browse card,
   // and a cancellation puts the job back on the board.
   revalidateFor("deal", [`/artisans/${result.deal.artisanId}`, "/browse", "/jobs"]);
+
+  // Only a CONFIRMED completion counts. An artisan marking their own work done
+  // moves nothing here, for the same reason it moves no badge: it is not yet a
+  // real outcome, and a marketing report built on self-reported success is
+  // worth nothing.
+  if (result.deal.status === COMPLETED) {
+    await recordConversion({
+      conversion: "deal_completed",
+      userId: result.deal.customerId,
+      subjectType: "Deal",
+      subjectId: result.deal.id,
+      conversionPath: "/dashboard",
+    });
+  }
 
   return NextResponse.json({
     deal: {
