@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { CITIES } from "@/lib/constants";
+import ArtisanReachPanel from "@/components/ArtisanReachPanel";
 
 function PostJobForm() {
   const router = useRouter();
@@ -15,6 +16,22 @@ function PostJobForm() {
   const fromName = params.get("name") || "";
   const fromCategory = params.get("category") || "";
   const fromCity = params.get("city") || "";
+
+  // ── THE INTENT SPLIT ─────────────────────────────────────────────────────
+  //
+  // An artisan arriving here is doing one of two things, and until 2026-10-03
+  // this page assumed the first: hiring somebody, or advertising themselves.
+  // Six artisans did the second, which put adverts on the customer job board
+  // and fed them to Google as JobPostings.
+  //
+  // This is a fork, NOT a role lock. An artisan who needs to hire another
+  // artisan is a real customer — a plumber hiring an electrician — and blocking
+  // that to tidy the board would break a genuine use case to fix a cosmetic one.
+  //
+  // Clicking "Request a quote" on an artisan's profile arrives with ?name=,
+  // which is already an unambiguous intent to hire, so it skips the fork.
+  const explicitHire = Boolean(fromName) || params.get("intent") === "hire";
+  const [intent, setIntent] = useState(null); // null | "hire" | "promote"
 
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({ title: "", description: "", categoryId: "", city: "", budget: "" });
@@ -96,9 +113,78 @@ function PostJobForm() {
       </div>
     );
 
+  // Artisans choose a door first. Customers never see this.
+  if (user.role === "ARTISAN" && !explicitHire && !intent)
+    return (
+      <div className="container-page py-10">
+        <div className="card mx-auto max-w-2xl p-8">
+          <h1 className="text-2xl font-bold">What would you like to do?</h1>
+          <p className="mt-1 text-gray-500">
+            You have an artisan account, so this page can go two ways.
+          </p>
+
+          <div className="mt-6 space-y-3">
+            <button
+              type="button"
+              onClick={() => setIntent("hire")}
+              className="w-full rounded-xl border border-gray-200 p-5 text-left transition hover:border-brand-300 hover:bg-brand-50"
+            >
+              <p className="font-bold text-gray-900">I want to hire someone</p>
+              <p className="mt-1 text-sm text-gray-600">
+                Post a job and receive quotes, the same as any customer. Use this even if the work
+                is for your own business.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIntent("promote")}
+              className="w-full rounded-xl border border-gray-200 p-5 text-left transition hover:border-brand-300 hover:bg-brand-50"
+            >
+              <p className="font-bold text-gray-900">I want customers to find me</p>
+              <p className="mt-1 text-sm text-gray-600">
+                See the pages you already appear on and what would put you on more of them. The
+                job board is for customers looking to hire — an advert posted there is not shown
+                to them.
+              </p>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+  if (intent === "promote")
+    return (
+      <div className="container-page py-10">
+        <div className="card mx-auto max-w-2xl p-8">
+          <button
+            type="button"
+            onClick={() => setIntent(null)}
+            className="text-sm text-gray-500 hover:text-brand-700"
+          >
+            ← Back
+          </button>
+          <h1 className="mt-3 text-2xl font-bold">How customers find you</h1>
+          <p className="mt-1 text-gray-500">
+            Your reach comes from your listings, not from the job board.
+          </p>
+          <ArtisanReachPanel />
+        </div>
+      </div>
+    );
+
   return (
     <div className="container-page py-10">
       <div className="card mx-auto max-w-2xl p-8">
+        {intent === "hire" && (
+          <button
+            type="button"
+            onClick={() => setIntent(null)}
+            className="mb-3 block text-sm text-gray-500 hover:text-brand-700"
+          >
+            ← Back
+          </button>
+        )}
         <h1 className="text-2xl font-bold">Post a job</h1>
         <p className="mt-1 text-gray-500">Describe what you need. Artisans near you will send quotes.</p>
 
