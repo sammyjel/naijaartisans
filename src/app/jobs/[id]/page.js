@@ -18,7 +18,7 @@ export async function generateMetadata({ params }) {
   const job = await prisma.jobRequest.findUnique({
     where: { id: params.id },
     select: {
-      title: true, city: true, status: true, description: true,
+      title: true, city: true, status: true, description: true, vacancyApprovedAt: true,
       category: { select: { name: true } },
       customer: { select: { role: true } },
     },
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }) {
   if (!job) return { title: "Job not found" };
   const title = `${job.title} — ${job.category.name} job in ${job.city}`;
   const description = (job.description || `Open ${job.category.name.toLowerCase()} job in ${job.city}. Send a quote on NaijaArtisans.`).slice(0, 160);
-  const { indexable } = vacancyEligibility({ status: job.status, posterRole: job.customer?.role });
+  const { indexable } = vacancyEligibility({ status: job.status, posterRole: job.customer?.role, approved: job.vacancyApprovedAt != null });
   return {
     title: job.status === "OPEN" ? title : `${title} (filled)`,
     description,
@@ -75,7 +75,7 @@ export default async function JobDetailPage({ params }) {
 
   // Emitted only when the shared rule in lib/job-seo.js says this is a real,
   // open vacancy — see that file for why poster role is part of the test.
-  const jobLd = vacancyEligibility({ status: job.status, posterRole: job.customer?.role }).indexable
+  const jobLd = vacancyEligibility({ status: job.status, posterRole: job.customer?.role, approved: job.vacancyApprovedAt != null }).indexable
     ? {
         "@context": "https://schema.org",
         "@type": "JobPosting",

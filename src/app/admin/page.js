@@ -82,9 +82,9 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
       take: 200,
       select: {
-        id: true, title: true, city: true, status: true, createdAt: true,
+        id: true, title: true, city: true, status: true, createdAt: true, vacancyApprovedAt: true,
         category: { select: { name: true } },
-        customer: { select: { id: true, name: true, phone: true, email: true } },
+        customer: { select: { id: true, name: true, phone: true, email: true, role: true } },
         _count: { select: { quotes: true } },
         // Newest deal per job. One query for the page, not one per row.
         deals: {

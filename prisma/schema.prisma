@@ -149,6 +149,9 @@ model JobRequest {
   /// Only OPEN jobs are broadcast to artisans, so accepting a quote takes the
   /// job off the alert list automatically.
   status      String   @default("OPEN") // OPEN | IN_PROGRESS | COMPLETED | CLOSED
+  /// Set by an admin to confirm an ARTISAN-posted job is a real vacancy (an
+  /// artisan hiring), not a self-advert. NULL = not approved. See lib/job-seo.js.
+  vacancyApprovedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 

@@ -64,6 +64,8 @@ test("the page passes BOTH status and poster role into the rule", () => {
   for (const call of calls) {
     assert.match(call, /status:/, `${call} does not pass status`);
     assert.match(call, /posterRole:/, `${call} does not pass posterRole`);
+    // Without it an admin approval would show in /admin and change nothing.
+    assert.match(call, /approved:\s*job\.vacancyApprovedAt\s*!=\s*null/, `${call} does not pass the admin approval`);
   }
 });
 
@@ -101,12 +103,15 @@ test("an ineligible job stays reachable rather than 404ing", () => {
   assert.match(jobPage, /follow:\s*true/, "links out of a filled job should still be followed");
 });
 
-test("only OPEN jobs are listed in the sitemap", () => {
+test("the sitemap lists only jobs the page itself would let Google index", () => {
+  // Listing a noindexed page in the sitemap is a contradiction Search Console
+  // reports. Both now come from lib/job-seo.js.
   assert.match(
     sitemap,
-    /jobRequest\.findMany\(\{[\s\S]{0,120}status:\s*["']OPEN["']/,
-    "closed jobs must drop out of the sitemap"
+    /jobRequest\.findMany\(\{[\s\S]{0,240}where:\s*INDEXABLE_VACANCY_WHERE/,
+    "the sitemap's job query must use the shared INDEXABLE_VACANCY_WHERE"
   );
+  assert.match(rule, /INDEXABLE_VACANCY_WHERE\s*=\s*\{\s*status:\s*["']OPEN["']/, "closed jobs must drop out of the sitemap");
 });
 
 test("the vacancy window is a real number of days, not an open-ended guess", () => {

@@ -29,6 +29,15 @@
 // The error in the other direction costs the rich result across every job page.
 // So the rule is deliberately conservative, and an explicit admin approval flag
 // is the way to let a real artisan-posted job back in when that is worth doing.
+//
+// ── THE APPROVAL (added 2026-10-15) ────────────────────────────────────────
+//
+// "Pile breaker — urgently needed at Eko Atlantic" was posted by an ARTISAN
+// account hiring labourers: a real vacancy, noindexed by the role check. An
+// admin now sets JobRequest.vacancyApprovedAt to let such a job through. It
+// overrides ONLY the role check — an approved job that is filled is still not a
+// vacancy — and it must be exactly `true`, so a truthy timestamp or string
+// passed by mistake cannot open the gate.
 
 export const VACANCY_DAYS = 45;
 
@@ -38,6 +47,7 @@ export const VACANCY_POSTER_ROLE = "CUSTOMER";
 export const NOT_OPEN = "not_open";
 export const POSTER_IS_NOT_A_CUSTOMER = "poster_is_not_a_customer";
 export const ELIGIBLE = "eligible";
+export const APPROVED_BY_ADMIN = "approved_by_admin";
 
 /**
  * Decides whether a job page may carry JobPosting markup and stay indexable.
@@ -46,7 +56,7 @@ export const ELIGIBLE = "eligible";
  * not be loaded must not be given the benefit of the doubt — silence costs one
  * rich result, a wrong claim risks all of them.
  *
- * @param {{ status?: string, posterRole?: string }} job
+ * @param {{ status?: string, posterRole?: string, approved?: boolean }} job
  * @returns {{ indexable: boolean, reason: string }}
  */
 export function vacancyEligibility(job) {
@@ -54,11 +64,20 @@ export function vacancyEligibility(job) {
   const posterRole = job?.posterRole;
 
   if (status !== "OPEN") return { indexable: false, reason: NOT_OPEN };
-  if (posterRole !== VACANCY_POSTER_ROLE) {
-    return { indexable: false, reason: POSTER_IS_NOT_A_CUSTOMER };
-  }
-  return { indexable: true, reason: ELIGIBLE };
+  if (posterRole === VACANCY_POSTER_ROLE) return { indexable: true, reason: ELIGIBLE };
+  if (job?.approved === true) return { indexable: true, reason: APPROVED_BY_ADMIN };
+  return { indexable: false, reason: POSTER_IS_NOT_A_CUSTOMER };
 }
+
+/**
+ * Prisma `where` fragment selecting the jobs vacancyEligibility would index, so
+ * the sitemap lists exactly the pages that are not noindexed. Keep in step with
+ * the function above; tests/job-seo.test.mjs checks the two agree.
+ */
+export const INDEXABLE_VACANCY_WHERE = {
+  status: "OPEN",
+  OR: [{ customer: { role: VACANCY_POSTER_ROLE } }, { vacancyApprovedAt: { not: null } }],
+};
 
 /** Convenience wrapper for the common boolean case. */
 export function isIndexableVacancy(job) {

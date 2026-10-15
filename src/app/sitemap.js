@@ -3,6 +3,7 @@ import { SITE_URL } from "@/lib/seo";
 import { citySlug } from "@/lib/constants";
 import { allGuides } from "@/lib/guides";
 import { parseEditorialDate, newest, lastMod } from "@/lib/sitemap-dates";
+import { INDEXABLE_VACANCY_WHERE } from "@/lib/job-seo";
 
 const BASE = SITE_URL;
 
@@ -65,7 +66,9 @@ export default async function sitemap() {
         select: { id: true, updatedAt: true },
       }),
       prisma.jobRequest.findMany({
-        where: { status: "OPEN" },
+        // Same rule as the job page's noindex, so the sitemap never lists a page
+        // that tells Google not to index it (artisan self-adverts, filled jobs).
+        where: INDEXABLE_VACANCY_WHERE,
         select: { id: true, updatedAt: true },
       }),
       prisma.category.findMany({ select: { id: true, slug: true } }),

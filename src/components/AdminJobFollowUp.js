@@ -13,6 +13,7 @@
 
 import Link from "next/link";
 import { whatsAppLink } from "@/lib/phone";
+import VacancyApprovalButton from "@/components/VacancyApprovalButton";
 
 const STATUS_STYLE = {
   OPEN: "bg-blue-50 text-blue-700 ring-blue-200",
@@ -110,6 +111,11 @@ export default function AdminJobFollowUp({ jobs }) {
                     >
                       {j.status}
                     </span>
+                    {/* Only artisan-posted open jobs are in doubt; a customer's job
+                        is a vacancy by default and a filled one never is. */}
+                    {j.status === "OPEN" && j.customer?.role === "ARTISAN" && (
+                      <VacancyApprovalButton jobId={j.id} approved={j.vacancyApprovedAt != null} />
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     {j.customer?.name || "—"}

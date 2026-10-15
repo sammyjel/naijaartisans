@@ -14,6 +14,8 @@ import {
   NOT_OPEN,
   POSTER_IS_NOT_A_CUSTOMER,
   ELIGIBLE,
+  APPROVED_BY_ADMIN,
+  INDEXABLE_VACANCY_WHERE,
 } from "../src/lib/job-seo.js";
 
 // ── the rule ───────────────────────────────────────────────────────────────
@@ -121,4 +123,46 @@ test("the real board resolves to exactly the two genuine jobs", () => {
   ];
   const indexable = board.filter(isIndexableVacancy).map((j) => j.title);
   assert.deepEqual(indexable, ["Range of carpentry work", "Plumbing Technician"]);
+});
+
+// ── admin approval (2026-10-15) ───────────────────────────────────────────
+
+test("an approved artisan-posted job is a vacancy", () => {
+  // "Pile breaker" — an artisan hiring labourers at Eko Atlantic.
+  const r = vacancyEligibility({ status: "OPEN", posterRole: "ARTISAN", approved: true });
+  assert.equal(r.indexable, true);
+  assert.equal(r.reason, APPROVED_BY_ADMIN);
+});
+
+test("approval never revives a filled job", () => {
+  for (const status of ["IN_PROGRESS", "COMPLETED", "CLOSED"]) {
+    const r = vacancyEligibility({ status, posterRole: "ARTISAN", approved: true });
+    assert.equal(r.indexable, false, `${status} should not be indexable even when approved`);
+    assert.equal(r.reason, NOT_OPEN);
+  }
+});
+
+test("approval must be exactly true, not merely truthy", () => {
+  // A timestamp, string or 1 passed by mistake must not open the gate.
+  for (const approved of [new Date(), "true", "yes", 1, {}, false, null, undefined]) {
+    assert.equal(
+      isIndexableVacancy({ status: "OPEN", posterRole: "ARTISAN", approved }),
+      false,
+      `approved=${JSON.stringify(approved)} should not count`
+    );
+  }
+});
+
+test("an unapproved artisan job is still not a vacancy (the 2026-10-03 rule holds)", () => {
+  assert.equal(isIndexableVacancy({ status: "OPEN", posterRole: "ARTISAN", approved: false }), false);
+});
+
+test("the sitemap filter admits the same two routes as the rule", () => {
+  // INDEXABLE_VACANCY_WHERE is a Prisma filter and cannot run here, so check its
+  // shape: OPEN, and either a customer poster or an approval.
+  assert.equal(INDEXABLE_VACANCY_WHERE.status, "OPEN");
+  assert.deepEqual(INDEXABLE_VACANCY_WHERE.OR, [
+    { customer: { role: "CUSTOMER" } },
+    { vacancyApprovedAt: { not: null } },
+  ]);
 });
