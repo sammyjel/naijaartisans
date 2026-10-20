@@ -34,11 +34,34 @@ export function toInternationalNG(raw) {
   // 0234... — a trunk 0 typed in front of the country code.
   if (digits.length === 14 && digits.startsWith("0" + NG_CODE)) return digits.slice(1);
 
+  // A Nigerian prefix with the wrong length is a typo, not a foreign number.
+  if (looksIncompleteNG(digits)) return null;
+
   // Anything else may be a non-Nigerian number; pass it through only if it is a
   // plausible international length, otherwise refuse.
   if (digits.length >= 11 && digits.length <= 15) return digits;
 
   return null;
+}
+
+/**
+ * True when a number is recognisably Nigerian but has the wrong number of
+ * digits, so nobody can call it.
+ *
+ * toInternationalNG passes any 11-15 digit string through as "maybe foreign",
+ * which is how "+234 81103291" (two digits short) was accepted on 2026-10-19 and
+ * left a hired artisan unreachable. A number that starts with 234 or 0 is
+ * Nigerian, and then only the exact lengths are real.
+ *
+ * @param {string|null|undefined} raw
+ */
+export function looksIncompleteNG(raw) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (!digits) return false; // missing, not incomplete
+  if (digits.startsWith("0" + NG_CODE)) return digits.length !== 14;
+  if (digits.startsWith(NG_CODE)) return digits.length !== 13;
+  if (digits.startsWith("0")) return digits.length !== 11;
+  return digits.length < 10;
 }
 
 /**

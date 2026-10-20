@@ -252,7 +252,7 @@ function quoteEmailHtml({ customerName, body, jobTitle, jobId }) {
  * @param {Array<any>} pending
  * @param {(n:any)=>string} renderHtml
  */
-async function deliverPending(pending, renderHtml) {
+export async function deliverPending(pending, renderHtml) {
   let emailed = 0;
   let failed = 0;
   let skipped = 0;

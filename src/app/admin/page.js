@@ -6,6 +6,7 @@ import AdminMapClient from "@/components/AdminMapClient";
 import JobBackfillPanel from "@/components/JobBackfillPanel";
 import QuoteBackfillPanel from "@/components/QuoteBackfillPanel";
 import AdminJobFollowUp from "@/components/AdminJobFollowUp";
+import FollowUpPanel from "@/components/FollowUpPanel";
 import MarketingHub from "@/components/MarketingHub";
 import { isFeatured } from "@/lib/format";
 
@@ -132,6 +133,8 @@ export default async function AdminPage() {
       </div>
 
       <MarketingHub />
+
+      <FollowUpPanel />
 
       <AdminJobFollowUp jobs={followUpJobs} />
 

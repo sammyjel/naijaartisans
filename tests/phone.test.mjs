@@ -6,7 +6,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { toInternationalNG, whatsAppLink } from "../src/lib/phone.js";
+import { toInternationalNG, whatsAppLink, looksIncompleteNG } from "../src/lib/phone.js";
 
 test("the everyday local form drops the trunk zero", () => {
   assert.equal(toInternationalNG("08012345678"), "2348012345678");
@@ -49,4 +49,24 @@ test("no number means no link, not a broken one", () => {
 
 test("a link without a message is still valid", () => {
   assert.equal(whatsAppLink("08012345678"), "https://wa.me/2348012345678");
+});
+
+// ── incomplete Nigerian numbers (2026-10-21) ───────────────────────────────
+
+test("a Nigerian number two digits short is recognised as incomplete", () => {
+  // The hired artisan in Port Harcourt was unreachable on exactly this.
+  assert.equal(looksIncompleteNG("+234 81103291"), true);
+  assert.equal(toInternationalNG("+234 81103291"), null, "no wa.me link to a number that cannot exist");
+  assert.equal(looksIncompleteNG("0803123456"), true);
+});
+
+test("complete numbers in every everyday shape are not flagged", () => {
+  for (const n of ["08031234567", "8031234567", "+234 803 123 4567", "234-803-123-4567", "02348031234567"]) {
+    assert.equal(looksIncompleteNG(n), false, n);
+    assert.equal(toInternationalNG(n), "2348031234567", n);
+  }
+});
+
+test("a missing number is missing, not incomplete", () => {
+  for (const n of ["", null, undefined]) assert.equal(looksIncompleteNG(n), false);
 });
