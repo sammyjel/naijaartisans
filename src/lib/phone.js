@@ -65,6 +65,23 @@ export function looksIncompleteNG(raw) {
 }
 
 /**
+ * Why a number cannot be saved, as a sentence for the member, or null if it can.
+ * Used at signup and on the dashboard so both refuse the same things.
+ *
+ * @param {string|null|undefined} raw
+ * @returns {string|null}
+ */
+export function phoneProblem(raw) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (!digits) return "Enter a phone number.";
+  if (/[a-z]/i.test(String(raw))) return "A phone number can only contain digits, spaces, + and -.";
+  if (!toInternationalNG(raw)) {
+    return "That phone number looks incomplete. Nigerian mobile numbers have 11 digits, e.g. 0803 123 4567.";
+  }
+  return null;
+}
+
+/**
  * A wa.me link for this number, optionally prefilled, or null.
  *
  * @param {string|null|undefined} raw

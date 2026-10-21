@@ -11,6 +11,7 @@ import PortfolioUploader from "@/components/PortfolioUploader";
 import UpgradeCard from "@/components/UpgradeCard";
 import NotificationsPanel from "@/components/NotificationsPanel";
 import DealsPanel from "@/components/DealsPanel";
+import PhoneEditor from "@/components/PhoneEditor";
 import { naira, priceRange, timeAgo, isFeatured } from "@/lib/format";
 import { SITE } from "@/lib/seo";
 
@@ -86,6 +87,11 @@ export default function DashboardPage() {
       <NotificationsPanel role={user.role} />
 
       <DealsPanel />
+
+      {/* Everyone: the number the other side of a deal uses to reach them. */}
+      <section className="mt-6">
+        <PhoneEditor />
+      </section>
 
       {/* Upgrade — automated Featured / Pro */}
       {isArtisan && (

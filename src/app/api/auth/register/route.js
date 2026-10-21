@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { recordConversion } from "@/lib/attribution";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setAuthCookie } from "@/lib/auth";
+import { phoneProblem } from "@/lib/phone";
 
 export async function POST(request) {
   try {
@@ -28,6 +29,10 @@ export async function POST(request) {
     if (!name) return NextResponse.json({ error: "Name is required." }, { status: 400 });
     if (!email && !phone)
       return NextResponse.json({ error: "Provide an email or a phone number." }, { status: 400 });
+    // A number nobody can dial is worse than none: the member looks reachable
+    // and is not. "+234 81103291" got through this way on 2026-10-19.
+    if (phone && phoneProblem(phone))
+      return NextResponse.json({ error: phoneProblem(phone) }, { status: 400 });
     if (!password || password.length < 6)
       return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
 

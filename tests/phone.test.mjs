@@ -6,7 +6,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { toInternationalNG, whatsAppLink, looksIncompleteNG } from "../src/lib/phone.js";
+import { toInternationalNG, whatsAppLink, looksIncompleteNG, phoneProblem } from "../src/lib/phone.js";
 
 test("the everyday local form drops the trunk zero", () => {
   assert.equal(toInternationalNG("08012345678"), "2348012345678");
@@ -69,4 +69,12 @@ test("complete numbers in every everyday shape are not flagged", () => {
 
 test("a missing number is missing, not incomplete", () => {
   for (const n of ["", null, undefined]) assert.equal(looksIncompleteNG(n), false);
+});
+
+test("phoneProblem accepts every everyday shape and refuses what nobody can dial", () => {
+  for (const ok of ["08031234567", "+234 803 123 4567", "803-123-4567"]) assert.equal(phoneProblem(ok), null, ok);
+  assert.match(phoneProblem("+234 81103291"), /incomplete/);
+  assert.match(phoneProblem("0803 12"), /incomplete/);
+  assert.match(phoneProblem(""), /Enter/);
+  assert.match(phoneProblem("0803abc4567"), /digits/);
 });
