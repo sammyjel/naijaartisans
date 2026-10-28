@@ -120,7 +120,10 @@ export default async function AdminPage() {
     <div className="container-page py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Admin dashboard</h1>
-        <AdminLogout />
+        <div className="flex gap-2">
+          <a href="/admin/orders" className="btn-primary">Done-for-you orders</a>
+          <AdminLogout />
+        </div>
       </div>
 
       {/* Stats */}

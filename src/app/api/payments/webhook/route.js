@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { verifyPaystackSignature } from "@/lib/paystack";
 import { PLANS } from "@/lib/monetization";
+import { applyOrderPayment } from "@/lib/dfy";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -21,6 +22,14 @@ export async function POST(request) {
   if (event?.event !== "charge.success") return new Response("Ignored", { status: 200 });
 
   const data = event.data || {};
+
+  // Done-for-you order payments share this webhook (one Paystack account, one
+  // URL) but are a separate business with their own tables — see lib/dfy.js.
+  if (data.metadata?.kind === "dfy") {
+    const r = await applyOrderPayment(data);
+    return new Response(r.body, { status: r.status });
+  }
+
   const reference = data.reference;
   const amount = data.amount;
   const userId = data.metadata?.userId;

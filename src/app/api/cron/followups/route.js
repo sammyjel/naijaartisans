@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { runFollowUps } from "@/lib/followups";
 import { runRenewals } from "@/lib/renewals";
+import { alertOverdueOrders } from "@/lib/dfy";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -42,7 +43,16 @@ export async function GET(request) {
       renewals = { error: "Renewal run failed." };
     }
     console.log("[renewals] cron", renewals);
-    return NextResponse.json({ ...summary, renewals });
+    // Done-for-you orders past their due date: the owner is told every morning
+    // until each is delivered.
+    let orders;
+    try {
+      orders = await alertOverdueOrders();
+    } catch (err) {
+      console.error("[dfy] overdue check failed:", err);
+      orders = { error: "Overdue check failed." };
+    }
+    return NextResponse.json({ ...summary, renewals, orders });
   } catch (err) {
     console.error("[followups] cron failed:", err);
     return NextResponse.json({ error: "Follow-up run failed." }, { status: 500 });

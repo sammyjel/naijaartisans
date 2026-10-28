@@ -106,7 +106,8 @@ export default function RootLayout({ children }) {
                     <li><Link href="/jobs" className="hover:text-brand-700">Job Board</Link></li>
                     <li><Link href="/guides" className="hover:text-brand-700">Guides</Link></li>
                     <li><Link href="/join" className="hover:text-brand-700">For Artisans</Link></li>
-                    <li><Link href="/pricing" className="hover:text-brand-700">Pricing</Link></li>
+                    <li><Link href="/done-for-you" className="hover:text-brand-700">Done-for-you</Link></li>
+                  <li><Link href="/pricing" className="hover:text-brand-700">Pricing</Link></li>
                   </ul>
                 </div>
 

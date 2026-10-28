@@ -324,6 +324,9 @@ model ServiceOrder {
   id        String @id @default(cuid())
   /// Short human code the customer quotes in emails, e.g. NA-2609-4F2A.
   reference String @unique
+  /// Secret in the customer's tracking link (/orders/<reference>?t=<token>).
+  /// The reference alone is guessable and printed in emails; this is not.
+  accessToken String
 
   package   ServicePackage @relation(fields: [packageId], references: [id])
   packageId String
@@ -365,6 +368,11 @@ model ServiceOrder {
   completedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  /// Revision requests used so far, against the package's allowance, and the
+  /// customer's latest "please change…" note for the deliverer.
+  revisionsUsed Int     @default(0)
+  revisionNote  String?
 
   payments   ServicePayment[]
   deliveries Delivery[]

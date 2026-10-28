@@ -4,6 +4,7 @@ import { citySlug } from "@/lib/constants";
 import { allGuides } from "@/lib/guides";
 import { parseEditorialDate, newest, lastMod } from "@/lib/sitemap-dates";
 import { INDEXABLE_VACANCY_WHERE } from "@/lib/job-seo";
+import { activePackages } from "@/lib/dfy-catalog";
 
 const BASE = SITE_URL;
 
@@ -37,7 +38,8 @@ export default async function sitemap() {
   // Hand-written pages: no lastModified key at all. Next omits the element when
   // the property is absent, which is exactly what we want.
   const staticRoutes = [
-    "", "/browse", "/jobs", "/services", "/guides", "/pricing", "/join",
+    "", "/browse", "/jobs", "/services", "/guides", "/pricing", "/join", "/done-for-you",
+    ...activePackages().map((p) => `/done-for-you/${p.slug}`),
     "/about", "/contact", "/help", "/terms", "/privacy", "/register",
   ].map((path) => ({
     url: `${BASE}${path}`,
