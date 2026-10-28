@@ -9,19 +9,18 @@
 /**
  * Who hears about a new job.
  *
- *   "all"      every registered artisan, whatever their trade or city (default)
- *   "matched"  only artisans who list a service in the job's category
+ *   "matched"  only artisans who list a service in the job's category (default)
+ *   "all"      every registered artisan, whatever their trade or city
  *
- * Set JOB_NOTIFY_SCOPE=matched to narrow it without a code change.
- *
- * "all" is the deliberate choice while the marketplace is small: with 51
- * artisans and 9 jobs ever, the cost of a plumber seeing a tailoring job is
- * lower than the cost of a customer getting no quote. That trade reverses as
- * volume grows — when artisans start ignoring the emails, switch to "matched".
- * Ranking below is what makes that switch cheap: the ordering is already right.
+ * "matched" since 2026-10-28: with ~90 artisans every job was going to all of
+ * them, so a plumber got tailoring jobs and learned to ignore the emails. The
+ * main trades now hold 6–11 artisans each. A job in a trade nobody lists
+ * reaches no artisan; the owner alert says so loudly so someone can be
+ * recruited (or the job forwarded by hand). Set JOB_NOTIFY_SCOPE=all to go
+ * back to broadcasting without a code change.
  */
 export const NOTIFY_SCOPE =
-  (process.env.JOB_NOTIFY_SCOPE || "all").toLowerCase() === "matched" ? "matched" : "all";
+  (process.env.JOB_NOTIFY_SCOPE || "matched").toLowerCase() === "all" ? "all" : "matched";
 
 /**
  * Hard ceiling on recipients per job. Well above the current 51 artisans, so in

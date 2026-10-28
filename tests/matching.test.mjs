@@ -183,8 +183,9 @@ test("returns nothing when there are no candidates", () => {
   assert.deepEqual(rankArtisansForJob([], { city: "Lagos" }), []);
 });
 
-test("default scope is broadcast to all artisans", () => {
-  assert.equal(NOTIFY_SCOPE, "all", "JOB_NOTIFY_SCOPE should default to all");
+test("default scope sends a job only to artisans in its trade", () => {
+  // A plumbing job goes to plumbers. JOB_NOTIFY_SCOPE=all restores the broadcast.
+  assert.equal(NOTIFY_SCOPE, "matched", "JOB_NOTIFY_SCOPE should default to matched");
 });
 
 // ── idempotency keys ───────────────────────────────────────────────────────

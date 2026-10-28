@@ -28,13 +28,17 @@ const TYPE = {
   deal_check_in: "FOLLOWUP_DEAL_CHECK_IN",
   confirm_done: "FOLLOWUP_CONFIRM_DONE",
 };
-const KIND_BY_TYPE = Object.fromEntries(Object.entries(TYPE).map(([k, v]) => [v, k]));
+// after_job says different things to each side, so it has a type per side.
+const AFTER_JOB_TYPE = { customer: "FOLLOWUP_REVIEW_REQUEST", artisan: "FOLLOWUP_JOB_COMPLETED" };
+const typeFor = (f) => (f.kind === "after_job" ? AFTER_JOB_TYPE[f.to] : TYPE[f.kind]);
 
-const CTA = {
-  no_quotes: "Update your job",
-  pick_quote: "Compare quotes",
-  deal_check_in: "Open the deal",
-  confirm_done: "Confirm or reject",
+const CTA_BY_TYPE = {
+  FOLLOWUP_NO_QUOTES: "Update your job",
+  FOLLOWUP_PICK_QUOTE: "Compare quotes",
+  FOLLOWUP_DEAL_CHECK_IN: "Open the deal",
+  FOLLOWUP_CONFIRM_DONE: "Confirm or reject",
+  FOLLOWUP_REVIEW_REQUEST: "Leave a review",
+  FOLLOWUP_JOB_COMPLETED: "See your profile",
 };
 
 const first = (name) => String(name || "").trim().split(/\s+/)[0] || "they";
@@ -95,6 +99,27 @@ export function followUpMessage(f, job, now = new Date()) {
           "Confirm it if you are satisfied — it counts towards their completed-jobs record — or tell them what is left.",
         url: `/dashboard#deal-${deal.id}`,
       };
+    case "after_job":
+      if (f.to === "customer") {
+        return {
+          title: `How did ${first(deal.artisan?.name)} do on "${job.title}"?`,
+          body:
+            `Thank you for confirming the work is finished. A quick star rating for ${deal.artisan?.name || "your artisan"} ` +
+            "takes 30 seconds, helps them win their next job and helps other customers choose well. " +
+            "And if you need another job done, post it any time — artisans near you are alerted straight away.",
+          url: `/artisans/${deal.artisanId}#reviews`,
+        };
+      }
+      return {
+        title: `Well done on "${job.title}" 🎉`,
+        body: deal.hasReview
+          ? `${job.customer?.name || "Your customer"} confirmed the job and left you a review — it is on your profile now. ` +
+            "Share your profile link on WhatsApp and with past customers: reviewed artisans get hired far more often."
+          : `${job.customer?.name || "Your customer"} confirmed the job is complete, and it now counts on your profile. ` +
+            "Ask them for a quick review while the job is fresh — reviewed artisans get hired far more often. " +
+            "Then share your profile link on WhatsApp so your next customer finds you.",
+        url: `/artisans/${deal.artisanId}`,
+      };
     default:
       return null;
   }
@@ -124,11 +149,33 @@ export function emailHtml({ name, title, body, cta, url }) {
   );
 }
 
-/** Recent jobs that could be stalled, shaped for decideFollowUps. */
+/**
+ * Jobs that could need a follow-up, shaped for decideFollowUps.
+ *
+ * A job with a live or just-completed deal is included whatever its own
+ * status: customers close the job the moment they hire (the 2026-10-26 Owerri
+ * painting job), and filtering on job status alone silently dropped that deal
+ * from every follow-up.
+ */
 async function loadCandidates(now) {
   const since = new Date(now.getTime() - (MAX_AGE_DAYS + 30) * 86400000);
+  const completedSince = new Date(now.getTime() - (MAX_AGE_DAYS + 1) * 86400000);
   const rows = await prisma.jobRequest.findMany({
-    where: { status: { in: ["OPEN", "IN_PROGRESS"] }, createdAt: { gte: since } },
+    where: {
+      OR: [
+        { status: { in: ["OPEN", "IN_PROGRESS"] }, createdAt: { gte: since } },
+        {
+          deals: {
+            some: {
+              OR: [
+                { status: { in: ["IN_PROGRESS", "AWAITING_CONFIRMATION"] } },
+                { status: "COMPLETED", completedAt: { gte: completedSince } },
+              ],
+            },
+          },
+        },
+      ],
+    },
     select: {
       id: true, title: true, city: true, status: true, createdAt: true, customerId: true,
       customer: { select: { name: true, phone: true } },
@@ -138,18 +185,22 @@ async function loadCandidates(now) {
         orderBy: { createdAt: "desc" },
         take: 1,
         select: {
-          id: true, status: true, artisanId: true, startedAt: true, workDoneAt: true,
+          id: true, status: true, artisanId: true, startedAt: true, workDoneAt: true, completedAt: true,
           artisan: { select: { name: true, phone: true } },
+          review: { select: { id: true } },
         },
       },
     },
   });
-  return rows.map((j) => ({
-    ...j,
-    quoteCount: j._count.quotes,
-    firstQuoteAt: j.quotes[0]?.createdAt || null,
-    deal: j.deals[0] || null,
-  }));
+  return rows.map((j) => {
+    const d = j.deals[0];
+    return {
+      ...j,
+      quoteCount: j._count.quotes,
+      firstQuoteAt: j.quotes[0]?.createdAt || null,
+      deal: d ? { ...d, hasReview: Boolean(d.review) } : null,
+    };
+  });
 }
 
 /**
@@ -195,7 +246,7 @@ export async function runFollowUps(opts = {}) {
     await prisma.notification.createMany({
       data: planned.map((p) => ({
         userId: p.userId,
-        type: TYPE[p.kind],
+        type: typeFor(p),
         title: p.title,
         body: p.body,
         url: p.url,
@@ -216,16 +267,18 @@ export async function runFollowUps(opts = {}) {
     : [];
 
   const delivery = await deliverPending(pending, (n) =>
-    emailHtml({ name: n.user?.name, title: n.title, body: n.body, url: n.url, cta: CTA[KIND_BY_TYPE[n.type]] || "Open NaijaArtisans" })
+    emailHtml({ name: n.user?.name, title: n.title, body: n.body, url: n.url, cta: CTA_BY_TYPE[n.type] || "Open NaijaArtisans" })
   );
 
   // The owner's daily list of everything stuck, newly nudged or not, with the
   // numbers to ring. A bad phone number is called out because that is a stall
   // no email can fix.
-  if (planned.length) {
+  // after_job is not a stall, so it stays out of the "still stuck" list.
+  const stuck = planned.filter((p) => p.kind !== "after_job");
+  if (stuck.length) {
     const seen = new Set();
     const rows = [];
-    for (const p of planned) {
+    for (const p of stuck) {
       if (seen.has(p.job.id)) continue;
       seen.add(p.job.id);
       const d = p.job.deal;

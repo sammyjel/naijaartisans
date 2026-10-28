@@ -8,6 +8,7 @@ import {
   followUpKey,
   FOLLOW_UP_HOURS,
   MAX_AGE_DAYS,
+  AFTER_JOB_HOURS,
 } from "../src/lib/followup-rules.js";
 
 const NOW = new Date("2026-10-21T08:00:00.000Z");
@@ -106,4 +107,38 @@ test("a deal started in the evening is caught at the first morning run after 36h
   const j = job({ status: "IN_PROGRESS", deal: { id: "d", status: "IN_PROGRESS", artisanId: "a", startedAt } });
   assert.equal(decideFollowUps(j, new Date("2026-10-20T08:00:00Z")).length, 0, "too early on the 20th");
   assert.equal(decideFollowUps(j, new Date("2026-10-21T08:00:00Z")).length, 2, "both sides asked on the 21st");
+});
+test("a day after the customer confirms, BOTH sides get the after-job follow-up", () => {
+  const j = job({
+    status: "COMPLETED",
+    deal: { id: "d", status: "COMPLETED", artisanId: "art", startedAt: daysAgo(5), workDoneAt: daysAgo(3), completedAt: daysAgo(1) },
+  });
+  const out = decideFollowUps(j, NOW);
+  assert.deepEqual(kinds(out), ["after_job->customer", "after_job->artisan"]);
+  assert.deepEqual(out.map((f) => f.userId), ["cust", "art"]);
+});
+
+test("the after-job follow-up waits a full day after confirmation", () => {
+  const j = job({
+    status: "COMPLETED",
+    deal: { id: "d", status: "COMPLETED", artisanId: "art", startedAt: daysAgo(3), completedAt: new Date(NOW - (AFTER_JOB_HOURS - 1) * 3600000) },
+  });
+  assert.deepEqual(decideFollowUps(j, NOW), []);
+});
+
+test("a customer who already left a review is not asked again; the artisan still hears", () => {
+  const j = job({
+    status: "COMPLETED",
+    deal: { id: "d", status: "COMPLETED", artisanId: "art", startedAt: daysAgo(5), completedAt: daysAgo(2), hasReview: true },
+  });
+  assert.deepEqual(kinds(decideFollowUps(j, NOW)), ["after_job->artisan"]);
+});
+
+test("a deal on a job the customer CLOSED is still followed up — the Owerri case", () => {
+  // 2026-10-26: hired, then the customer closed the job with the deal running.
+  const j = job({
+    status: "CLOSED",
+    deal: { id: "d", status: "IN_PROGRESS", artisanId: "art", startedAt: daysAgo(2) },
+  });
+  assert.deepEqual(kinds(decideFollowUps(j, NOW)), ["deal_check_in->artisan", "deal_check_in->customer"]);
 });

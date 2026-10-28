@@ -281,8 +281,8 @@ export default async function ArtisanProfilePage({ params }) {
             )}
           </div>
 
-          {/* Reviews */}
-          <div className="card p-6">
+          {/* Reviews — the after-job follow-up email links to #reviews */}
+          <div id="reviews" className="card scroll-mt-20 p-6">
             <h2 className="text-lg font-bold">Reviews ({ratings.length})</h2>
             <div className="mt-4 space-y-4">
               {artisan.reviewsGot.length === 0 ? (

@@ -77,8 +77,8 @@ export async function findEligibleArtisansForJob(job, limit = MAX_ARTISANS_PER_J
       role: "ARTISAN",
       // The customer must never be notified about their own job.
       ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
-      // Default scope is "all": every registered artisan hears about every job.
-      // JOB_NOTIFY_SCOPE=matched narrows it to artisans who list this trade.
+      // Default scope is "matched": only artisans who list this trade hear about
+      // the job. JOB_NOTIFY_SCOPE=all broadcasts to every artisan instead.
       ...(NOTIFY_SCOPE === "matched" ? { services: { some: { categoryId } } } : {}),
     },
     select: {
@@ -344,16 +344,25 @@ export async function deliverPending(pending, renderHtml) {
 export function alertOwnerOfJob(job, categoryName, stats) {
   const base = String(SITE_URL).replace(/\/+$/, "");
   const reachedNobody = stats.emailed === 0;
+  // With trade-only matching, "nobody" usually means nobody lists this trade —
+  // a recruiting gap, not an email fault, and the fix is different.
+  const noTrade = NOTIFY_SCOPE === "matched" && stats.eligible === 0;
 
   return notifyOperator({
-    title: reachedNobody ? "New job posted — BUT NOBODY WAS EMAILED" : "New job posted",
-    subject: reachedNobody
+    title: noTrade
+      ? `New ${categoryName} job — NO ${categoryName.toUpperCase()} ARTISANS ON THE SITE`
+      : reachedNobody ? "New job posted — BUT NOBODY WAS EMAILED" : "New job posted",
+    subject: noTrade
+      ? `[NaijaArtisans] No ${categoryName} artisans for: ${job.title}`
+      : reachedNobody
       ? `[NaijaArtisans] Job posted but 0 artisans emailed — ${job.title}`
-      : `[NaijaArtisans] New job: ${job.title} (${stats.emailed} artisans emailed)`,
+      : `[NaijaArtisans] New ${categoryName} job: ${job.title} (${stats.emailed} artisans emailed)`,
     urgent: reachedNobody,
-    intro: reachedNobody
+    intro: noTrade
+      ? `A customer posted a ${categoryName} job in ${job.city}, and no artisan on the site lists ${categoryName}, so nobody was alerted. Find one (WhatsApp groups, referrals) and send them the job link, or the customer will hear nothing.`
+      : reachedNobody
       ? "A customer posted a job and no artisan received an email. The job is live on the board, but nobody has been told about it. Check RESEND_API_KEY and that artisan accounts have email addresses."
-      : `A customer posted a job and ${stats.emailed} artisan${stats.emailed === 1 ? " was" : "s were"} emailed. Follow up if no quotes arrive.`,
+      : `A customer posted a ${categoryName} job and ${stats.emailed} ${NOTIFY_SCOPE === "matched" ? categoryName + " " : ""}artisan${stats.emailed === 1 ? " was" : "s were"} emailed. Follow up if no quotes arrive.`,
     rows: [
       ["Job", job.title],
       ["Service", categoryName],

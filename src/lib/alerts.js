@@ -21,16 +21,44 @@ import { sendEmail, emailConfigured } from "./email";
 // somewhere different from lead alerts.
 const DEFAULT_OPERATOR_EMAIL = "sammyjelng@gmail.com";
 
-export function operatorRecipients() {
+// The public support inbox also gets every alert — but only once the domain can
+// actually receive mail. Until email forwarding is set up at the registrar the
+// domain has no MX record, every send to it hard-bounces, and Resend then puts
+// the address on its suppression list, which would keep blocking it long after
+// forwarding is fixed. So the MX lookup decides, and support@ joins by itself
+// the day forwarding goes live.
+const SUPPORT_EMAIL = "support@naijaartisans.com";
+const MX_RECHECK_MS = 60 * 60 * 1000;
+let mxCache = { ok: false, at: 0 };
+
+async function supportInboxReachable() {
+  if (Date.now() - mxCache.at < MX_RECHECK_MS) return mxCache.ok;
+  let ok = false;
+  try {
+    const { resolveMx } = await import("node:dns/promises");
+    const records = await resolveMx(SUPPORT_EMAIL.split("@")[1]);
+    ok = records.some((r) => r.exchange);
+  } catch {
+    ok = false; // ENODATA / ENOTFOUND: no mail server yet
+  }
+  mxCache = { ok, at: Date.now() };
+  return ok;
+}
+
+export async function operatorRecipients() {
   const raw = (
     process.env.OPERATOR_ALERT_EMAIL ||
     process.env.LEAD_NOTIFY_EMAIL ||
     DEFAULT_OPERATOR_EMAIL
   ).trim();
-  return raw
+  const list = raw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  if (!list.some((e) => e.toLowerCase() === SUPPORT_EMAIL) && (await supportInboxReachable())) {
+    list.push(SUPPORT_EMAIL);
+  }
+  return list;
 }
 
 /** Which site an alert came from, so one inbox can serve several deployments. */
@@ -91,7 +119,7 @@ export async function notifyOperator(input) {
     console.warn(`[alert] ${input.title} — RESEND_API_KEY not set, not emailed.`);
     return { sent: false, reason: "not_configured" };
   }
-  const to = operatorRecipients();
+  const to = await operatorRecipients();
   if (to.length === 0) return { sent: false, reason: "no_recipient" };
 
   try {
