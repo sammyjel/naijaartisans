@@ -85,12 +85,19 @@ export default function UpgradeCard() {
             <div className="font-semibold">{plan.name}</div>
             <div className="text-sm text-brand-700">{ngn(plan.price)} <span className="text-gray-400">{plan.period}</span></div>
             <div className="mt-2 text-xs font-semibold text-brand-700">
-              {loading === plan.id ? "Starting payment…" : `Pay with Paystack →`}
+              {loading === plan.id
+                ? "Starting payment…"
+                : (plan.id === "pro" ? proActive : featuredActive)
+                ? "Renew — add 1 month →"
+                : "Pay with Paystack →"}
             </div>
           </button>
         ))}
       </div>
-      <p className="mt-3 text-xs text-gray-400">Secure payment by Paystack. Your plan activates automatically after payment.</p>
+      <p className="mt-3 text-xs text-gray-400">
+        Secure payment by Paystack. Each payment covers 30 days and activates automatically. No automatic
+        charges: we remind you before your month ends, and renewing early adds to the days you have left.
+      </p>
     </div>
   );
 }

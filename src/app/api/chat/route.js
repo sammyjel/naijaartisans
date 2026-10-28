@@ -10,7 +10,7 @@ YOUR JOB
 
 KEY FACTS
 - Listing as an artisan is 100% FREE. Posting a job as a customer is FREE.
-- Optional paid boosts for artisans: Featured listing (₦2,000/week) and Artisan Pro (₦5,000/month) — these only improve visibility, they are NOT required to be listed.
+- Optional paid boosts for artisans: Featured listing (₦2,000/month) and Artisan Pro (₦5,000/month), paid month by month with no automatic charge — these only improve visibility, they are NOT required to be listed.
 - Customers contact artisans directly by call, WhatsApp or email, or post a job and receive quotes.
 - Covers all 36 states + FCT.
 

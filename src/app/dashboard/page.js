@@ -95,7 +95,7 @@ export default function DashboardPage() {
 
       {/* Upgrade — automated Featured / Pro */}
       {isArtisan && (
-        <section className="mt-6">
+        <section id="upgrade" className="mt-6 scroll-mt-20">
           <UpgradeCard />
         </section>
       )}

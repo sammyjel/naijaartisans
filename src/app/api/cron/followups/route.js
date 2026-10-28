@@ -1,4 +1,5 @@
-// Daily follow-up on stalled jobs. Logic in src/lib/followups.js.
+// Daily follow-up on stalled jobs (src/lib/followups.js), plus monthly-plan
+// renewal reminders (src/lib/renewals.js) on the cron run.
 //
 //   GET  — Vercel Cron, daily (vercel.json). Vercel sends
 //          "Authorization: Bearer $CRON_SECRET"; with CRON_SECRET unset the
@@ -9,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { runFollowUps } from "@/lib/followups";
+import { runRenewals } from "@/lib/renewals";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,7 +31,18 @@ export async function GET(request) {
     const result = await runFollowUps({ send: true });
     const { items, ...summary } = result;
     console.log("[followups] cron", summary);
-    return NextResponse.json(summary);
+    // Renewal reminders ride the same daily run. A failure there must not
+    // hide the follow-up result, so it is reported alongside, not thrown.
+    let renewals;
+    try {
+      renewals = await runRenewals({ send: true });
+      delete renewals.items;
+    } catch (err) {
+      console.error("[renewals] cron failed:", err);
+      renewals = { error: "Renewal run failed." };
+    }
+    console.log("[renewals] cron", renewals);
+    return NextResponse.json({ ...summary, renewals });
   } catch (err) {
     console.error("[followups] cron failed:", err);
     return NextResponse.json({ error: "Follow-up run failed." }, { status: 500 });

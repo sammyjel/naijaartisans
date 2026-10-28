@@ -108,7 +108,7 @@ function esc(v) {
     .replace(/"/g, "&quot;");
 }
 
-function emailHtml({ name, title, body, cta, url }) {
+export function emailHtml({ name, title, body, cta, url }) {
   const href = String(SITE_URL).replace(/\/+$/, "") + url;
   return (
     '<div style="font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;max-width:560px">' +

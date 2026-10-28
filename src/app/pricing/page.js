@@ -81,6 +81,10 @@ export default function PricingPage() {
       </div>
 
       <div className="mx-auto mt-10 max-w-2xl text-center text-sm text-gray-500">
+        <p className="mb-3">
+          Both plans are monthly: each payment covers 30 days. There is no automatic charge — we remind you
+          before your month ends, and you renew only if you want to.
+        </p>
         <p>
           Not an artisan yet?{" "}
           <Link href="/register?role=artisan" className="font-semibold text-brand-700 hover:underline">

@@ -15,8 +15,8 @@ export const PLANS = [
     id: "featured",
     name: "Featured Listing",
     price: 2000,
-    days: 7,
-    period: "per week",
+    days: 30,
+    period: "per month",
     tagline: "Get seen first by customers searching in your city.",
     perks: [
       "Top placement in search & category pages",
