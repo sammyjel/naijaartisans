@@ -5,7 +5,7 @@ import { SITE_URL } from "@/lib/seo";
 
 // Where new-lead alerts go. Set LEAD_NOTIFY_EMAIL in Vercel to your real inbox
 // (e.g. your Gmail) so you actually receive them.
-const OWNER_EMAIL = (process.env.LEAD_NOTIFY_EMAIL || "support@naijaartisans.com").trim();
+const OWNER_EMAIL = (process.env.LEAD_NOTIFY_EMAIL || "sammyjel.ng@gmail.com").trim();
 
 export async function POST(request) {
   try {

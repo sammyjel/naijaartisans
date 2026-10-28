@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { emailConfigured, sendEmail } from "@/lib/email";
 
-const OWNER_EMAIL = (process.env.LEAD_NOTIFY_EMAIL || "support@naijaartisans.com").trim();
+const OWNER_EMAIL = (process.env.LEAD_NOTIFY_EMAIL || "sammyjel.ng@gmail.com").trim();
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) =>

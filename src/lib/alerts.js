@@ -19,7 +19,7 @@ import { sendEmail, emailConfigured } from "./email";
 // is how one of them ends up stale and the alerts nobody is receiving are the
 // ones nobody notices. Set OPERATOR_ALERT_EMAIL only to route order alerts
 // somewhere different from lead alerts.
-const DEFAULT_OPERATOR_EMAIL = "sammyjelng@gmail.com";
+const DEFAULT_OPERATOR_EMAIL = "sammyjel.ng@gmail.com";
 
 // The public support inbox also gets every alert — but only once the domain can
 // actually receive mail. Until email forwarding is set up at the registrar the

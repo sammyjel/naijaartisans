@@ -60,7 +60,7 @@ export default function HelpPage() {
         <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">Help &amp; FAQ</h1>
         <p className="mt-3 text-lg text-gray-600">
           Quick answers for customers and artisans. Can’t find what you need? Email{" "}
-          <a href="mailto:support@naijaartisans.com" className="font-medium text-brand-700 hover:underline">support@naijaartisans.com</a>.
+          <a href="mailto:sammyjel.ng@gmail.com" className="font-medium text-brand-700 hover:underline">sammyjel.ng@gmail.com</a>.
         </p>
 
         <h2 className="mt-10 text-xl font-bold">For customers</h2>
@@ -82,7 +82,7 @@ export default function HelpPage() {
           <p className="mt-2 text-sm text-brand-700">
             We’re here for you. Reach our support team and we’ll get back to you.
           </p>
-          <a href="mailto:support@naijaartisans.com" className="btn-primary mt-4 inline-flex">
+          <a href="mailto:sammyjel.ng@gmail.com" className="btn-primary mt-4 inline-flex">
             Email support
           </a>
         </div>

@@ -105,7 +105,7 @@ export default function AboutPage() {
           </div>
           <p className="mt-4 text-sm text-brand-700">
             Questions? Email{" "}
-            <a href="mailto:support@naijaartisans.com" className="font-medium underline">support@naijaartisans.com</a>.
+            <a href="mailto:sammyjel.ng@gmail.com" className="font-medium underline">sammyjel.ng@gmail.com</a>.
           </p>
         </div>
 

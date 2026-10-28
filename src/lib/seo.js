@@ -11,7 +11,9 @@ export const SITE = {
   url: SITE_URL,
   description:
     "NaijaArtisans is a service marketplace that connects skilled Nigerian artisans — plumbers, electricians, tailors, caterers, mechanics and more — with customers who need their services.",
-  email: "support@naijaartisans.com",
+  // Temporary: support@naijaartisans.com cannot receive mail until forwarding is
+  // set up at Namecheap. Swap every "sammyjel.ng@gmail.com" in src/ back then.
+  email: "sammyjel.ng@gmail.com",
   logo: `${SITE_URL}/images/hero.jpg`,
 };
 

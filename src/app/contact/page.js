@@ -26,8 +26,8 @@ export default function ContactPage() {
           <div className="space-y-5">
             <div className="card p-5">
               <h2 className="font-bold">Email</h2>
-              <a href="mailto:support@naijaartisans.com" className="mt-1 block text-brand-700 hover:underline">
-                support@naijaartisans.com
+              <a href="mailto:sammyjel.ng@gmail.com" className="mt-1 block text-brand-700 hover:underline">
+                sammyjel.ng@gmail.com
               </a>
             </div>
             <div className="card p-5">

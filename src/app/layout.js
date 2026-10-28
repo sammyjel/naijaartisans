@@ -125,8 +125,8 @@ export default function RootLayout({ children }) {
                   <p className="font-semibold text-gray-900">Connect</p>
                   <ul className="mt-3 space-y-2">
                     <li>
-                      <a href="mailto:support@naijaartisans.com" className="font-medium text-brand-700 hover:underline">
-                        support@naijaartisans.com
+                      <a href="mailto:sammyjel.ng@gmail.com" className="font-medium text-brand-700 hover:underline">
+                        sammyjel.ng@gmail.com
                       </a>
                     </li>
                   </ul>
