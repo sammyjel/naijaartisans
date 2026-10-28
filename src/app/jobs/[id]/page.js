@@ -11,6 +11,7 @@ import JsonLd from "@/components/JsonLd";
 import { naira, timeAgo } from "@/lib/format";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 import { vacancyEligibility, validThrough } from "@/lib/job-seo";
+import { cityAddress } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +88,7 @@ export default async function JobDetailPage({ params }) {
         hiringOrganization: { "@type": "Organization", name: "NaijaArtisans", sameAs: SITE.url },
         jobLocation: {
           "@type": "Place",
-          address: { "@type": "PostalAddress", addressLocality: job.city, addressCountry: "NG" },
+          address: cityAddress(job.city),
         },
         ...(job.budget
           ? { baseSalary: { "@type": "MonetaryAmount", currency: "NGN", value: { "@type": "QuantitativeValue", value: job.budget } } }

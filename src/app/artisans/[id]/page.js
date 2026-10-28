@@ -8,6 +8,7 @@ import JsonLd from "@/components/JsonLd";
 import ShareButtons from "@/components/ShareButtons";
 import LocationMapClient from "@/components/LocationMapClient";
 import { SITE, breadcrumbLd } from "@/lib/seo";
+import { cityAddress } from "@/lib/constants";
 
 // ISR. This page is public marketing content: no cookies, no headers(), no
 // per-user data, nothing that has to be true to the second. It was
@@ -141,7 +142,7 @@ export default async function ArtisanProfilePage({ params }) {
     image: galleryUrls.length ? galleryUrls : artisan.avatarUrl || SITE.logo,
     areaServed: artisan.city || "Nigeria",
     address: artisan.city
-      ? { "@type": "PostalAddress", addressLocality: artisan.city, addressCountry: "NG" }
+      ? cityAddress(artisan.city)
       : undefined,
     ...(artisan.latitude != null && artisan.longitude != null
       ? { geo: { "@type": "GeoCoordinates", latitude: artisan.latitude, longitude: artisan.longitude } }

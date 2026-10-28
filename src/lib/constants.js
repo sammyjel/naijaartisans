@@ -44,6 +44,63 @@ export const CITIES = [
   "Yola",
 ];
 
+// State for every city above, for structured data (Google's JobPosting report
+// asks for jobLocation.address.addressRegion). The city is all the site knows
+// about where a job is, so street and postcode are deliberately not guessed.
+export const STATE_BY_CITY = {
+  Aba: "Abia",
+  Abakaliki: "Ebonyi",
+  Abeokuta: "Ogun",
+  Abuja: "Federal Capital Territory",
+  "Ado-Ekiti": "Ekiti",
+  Akure: "Ondo",
+  Asaba: "Delta",
+  Awka: "Anambra",
+  Bauchi: "Bauchi",
+  "Benin City": "Edo",
+  "Birnin Kebbi": "Kebbi",
+  Calabar: "Cross River",
+  Damaturu: "Yobe",
+  Dutse: "Jigawa",
+  Enugu: "Enugu",
+  Gombe: "Gombe",
+  Gusau: "Zamfara",
+  Ibadan: "Oyo",
+  Ilorin: "Kwara",
+  Jalingo: "Taraba",
+  Jos: "Plateau",
+  Kaduna: "Kaduna",
+  Kano: "Kano",
+  Katsina: "Katsina",
+  Lafia: "Nasarawa",
+  Lagos: "Lagos",
+  Lokoja: "Kogi",
+  Maiduguri: "Borno",
+  Makurdi: "Benue",
+  Minna: "Niger",
+  Nnewi: "Anambra",
+  Onitsha: "Anambra",
+  Osogbo: "Osun",
+  Owerri: "Imo",
+  "Port Harcourt": "Rivers",
+  Sokoto: "Sokoto",
+  Umuahia: "Abia",
+  Uyo: "Akwa Ibom",
+  Warri: "Delta",
+  Yenagoa: "Bayelsa",
+  Yola: "Adamawa",
+};
+
+/** schema.org PostalAddress for a city: locality, state when known, country. */
+export function cityAddress(city) {
+  return {
+    "@type": "PostalAddress",
+    addressLocality: city,
+    ...(STATE_BY_CITY[city] ? { addressRegion: STATE_BY_CITY[city] } : {}),
+    addressCountry: "NG",
+  };
+}
+
 // URL-safe slug for a city, e.g. "Port Harcourt" -> "port-harcourt".
 export function citySlug(city) {
   return city.toLowerCase().trim().replace(/\s+/g, "-");
