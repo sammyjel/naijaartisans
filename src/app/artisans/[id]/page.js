@@ -9,6 +9,7 @@ import ShareButtons from "@/components/ShareButtons";
 import LocationMapClient from "@/components/LocationMapClient";
 import { SITE, breadcrumbLd } from "@/lib/seo";
 import { cityAddress } from "@/lib/constants";
+import { LISTED_ARTISAN } from "@/lib/constants";
 
 // ISR. This page is public marketing content: no cookies, no headers(), no
 // per-user data, nothing that has to be true to the second. It was
@@ -47,7 +48,7 @@ const PRERENDER_MAX = Number(process.env.PRERENDER_MAX || 100);
 export async function generateStaticParams() {
   try {
     const artisans = await prisma.user.findMany({
-      where: { role: "ARTISAN" },
+      where: { role: "ARTISAN", ...LISTED_ARTISAN },
       // Most recently active first, so the cap keeps the pages most likely to
       // be visited rather than an arbitrary slice.
       orderBy: { updatedAt: "desc" },
@@ -65,11 +66,11 @@ export async function generateMetadata({ params }) {
   const artisan = await prisma.user.findUnique({
     where: { id: params.id },
     select: {
-      name: true, city: true, bio: true, role: true,
+      name: true, city: true, bio: true, role: true, suspendedAt: true,
       services: { select: { category: { select: { name: true } } }, take: 1 },
     },
   });
-  if (!artisan || artisan.role !== "ARTISAN") return { title: "Artisan not found" };
+  if (!artisan || artisan.role !== "ARTISAN" || artisan.suspendedAt) return { title: "Artisan not found" };
 
   const trade = artisan.services[0]?.category?.name;
   const where = artisan.city ? ` in ${artisan.city}` : "";
@@ -89,7 +90,7 @@ export default async function ArtisanProfilePage({ params }) {
       where: { id: params.id },
       select: {
         id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true, featuredUntil: true, latitude: true, longitude: true, avatarUrl: true, openTime: true, closeTime: true,
-        completedDealCount: true,
+        completedDealCount: true, verifiedAt: true, suspendedAt: true,
         services: { include: { category: true }, orderBy: { createdAt: "desc" } },
         reviewsGot: {
           include: { author: { select: { id: true, name: true } } },
@@ -98,7 +99,7 @@ export default async function ArtisanProfilePage({ params }) {
       },
   });
 
-  if (!artisan || artisan.role !== "ARTISAN") notFound();
+  if (!artisan || artisan.role !== "ARTISAN" || artisan.suspendedAt) notFound();
 
   // Work gallery — read defensively so the profile still renders if the
   // galleryUrls column hasn't been migrated yet.
@@ -202,6 +203,9 @@ export default async function ArtisanProfilePage({ params }) {
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-bold">{artisan.name}</h1>
+                  {artisan.verifiedAt && (
+                    <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800" title="NaijaArtisans has contacted this artisan and confirmed their phone number and trade">✓ Verified</span>
+                  )}
                   {isFeatured(artisan.featuredUntil) && (
                     <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">⭐ Featured</span>
                   )}

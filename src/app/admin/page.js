@@ -122,6 +122,7 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-bold">Admin dashboard</h1>
         <div className="flex gap-2">
           <a href="/admin/orders" className="btn-primary">Done-for-you orders</a>
+          <a href="/admin/artisans" className="btn-outline">Verify / suspend artisans</a>
           <AdminLogout />
         </div>
       </div>

@@ -6,7 +6,7 @@ export const metadata = {
   alternates: { canonical: "/terms" },
 };
 
-const UPDATED = "26 June 2026";
+const UPDATED = "30 October 2026";
 
 export default function TermsPage() {
   return (
@@ -19,7 +19,8 @@ export default function TermsPage() {
         <p className="mt-6 text-gray-700">
           Welcome to NaijaArtisans. These Terms of Service (“Terms”) govern your use of
           naijaartisans.com and our services. By creating an account or using the platform, you agree
-          to these Terms. If you do not agree, please do not use the service.
+          to these Terms. If you do not agree, please do not use the service. NaijaArtisans is operated by
+          DMBTREND LTD (RC 9910105), a company registered in Nigeria.
         </p>
 
         <Section title="1. What NaijaArtisans is">
@@ -70,10 +71,14 @@ export default function TermsPage() {
         <Section title="6. Paid features">
           <p className="text-gray-700">
             Artisans may purchase optional <strong>Featured</strong> or <strong>Pro</strong> listings to
-            increase visibility. These are billed as shown on our{" "}
+            increase visibility. Each is a one-month payment that does not renew automatically, billed as
+            shown on our{" "}
             <Link href="/pricing" className="text-brand-700 hover:underline">Pricing</Link> page and
             processed securely via Paystack. Paid features improve placement only — they do not
-            guarantee jobs, leads or income.
+            guarantee jobs, leads or income. We also sell fixed-price{" "}
+            <Link href="/done-for-you" className="text-brand-700 hover:underline">done-for-you</Link> digital
+            services. Refunds and cancellations follow our{" "}
+            <Link href="/refund-policy" className="text-brand-700 hover:underline">Refund Policy</Link>.
           </p>
         </Section>
 
@@ -86,7 +91,10 @@ export default function TermsPage() {
             <li>Attempt to disrupt, hack or overload the platform.</li>
             <li>Post fake reviews or manipulate ratings.</li>
           </ul>
-          <p className="mt-2 text-gray-700">We may suspend or remove accounts that breach these Terms.</p>
+          <p className="mt-2 text-gray-700">
+            We may suspend or remove accounts that breach these Terms. The full rules are in our{" "}
+            <Link href="/acceptable-use" className="text-brand-700 hover:underline">Acceptable Use Policy</Link>.
+          </p>
         </Section>
 
         <Section title="8. Reviews &amp; content">

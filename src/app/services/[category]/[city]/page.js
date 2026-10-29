@@ -5,6 +5,7 @@ import JsonLd from "@/components/JsonLd";
 import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { cityFromSlug, citySlug } from "@/lib/constants";
 import { SITE, breadcrumbLd } from "@/lib/seo";
+import { LISTED_SERVICE } from "@/lib/constants";
 
 // ISR. This page is public marketing content: no cookies, no headers(), no
 // per-user data, nothing that has to be true to the second. It was
@@ -33,6 +34,7 @@ export async function generateStaticParams() {
     // Only category+city pairs that actually have a listing. Generating all
     // 50 categories x 37 cities would prerender ~1,850 mostly empty pages.
     const pairs = await prisma.service.findMany({
+      where: LISTED_SERVICE,
       distinct: ["categoryId", "city"],
       select: { city: true, category: { select: { slug: true } } },
     });
@@ -51,7 +53,7 @@ async function load(categorySlug, citySlugParam) {
   const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
   if (!category) return { category: null, city, services: [] };
   const services = await prisma.service.findMany({
-    where: { categoryId: category.id, city },
+    where: { categoryId: category.id, city, ...LISTED_SERVICE },
     orderBy: { createdAt: "desc" },
     include: { artisan: { select: { id: true, name: true, featuredUntil: true } } },
   });
@@ -66,7 +68,7 @@ export async function generateMetadata({ params }) {
 
   const name = category.name;
   const lower = name.toLowerCase();
-  const count = await prisma.service.count({ where: { categoryId: category.id, city } });
+  const count = await prisma.service.count({ where: { categoryId: category.id, city, ...LISTED_SERVICE } });
 
   return {
     title: `${name} in ${city} — Hire Trusted ${name} Near You`,

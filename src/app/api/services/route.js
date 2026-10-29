@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidateFor } from "@/lib/cached-queries";
+import { LISTED_SERVICE } from "@/lib/constants";
 
 // GET /api/services?category=plumbing&city=Lagos&q=pipe
 export async function GET(request) {
@@ -10,7 +11,7 @@ export async function GET(request) {
   const city = searchParams.get("city");
   const q = searchParams.get("q");
 
-  const where = {};
+  const where = { ...LISTED_SERVICE };
   if (categorySlug) where.category = { slug: categorySlug };
   if (city) where.city = city;
   if (q) {

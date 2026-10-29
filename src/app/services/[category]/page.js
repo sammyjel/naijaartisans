@@ -5,6 +5,7 @@ import JsonLd from "@/components/JsonLd";
 import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { citySlug } from "@/lib/constants";
 import { SITE, breadcrumbLd } from "@/lib/seo";
+import { LISTED_SERVICE } from "@/lib/constants";
 
 // ISR. This page is public marketing content: no cookies, no headers(), no
 // per-user data, nothing that has to be true to the second. It was
@@ -65,7 +66,7 @@ export default async function CategoryLandingPage({ params }) {
   if (!category) notFound();
 
   const services = await prisma.service.findMany({
-    where: { categoryId: category.id },
+    where: { categoryId: category.id, ...LISTED_SERVICE },
     orderBy: { createdAt: "desc" },
     include: { artisan: { select: { id: true, name: true, featuredUntil: true } } },
   });

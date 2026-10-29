@@ -16,6 +16,7 @@
 import { unstable_cache, revalidateTag, revalidatePath } from "next/cache";
 import { prisma } from "./prisma";
 import { TAGS, CATEGORIES_TTL, LISTINGS_TTL, JOBS_TTL, tagsForWrite } from "./cache-policy";
+import { LISTED_SERVICE } from "./constants";
 
 /** Columns /browse needs for an artisan. Kept here so the cached shape is one definition. */
 const BROWSE_ARTISAN_SELECT = {
@@ -29,6 +30,7 @@ const BROWSE_ARTISAN_SELECT = {
   ratingAverage: true,
   reviewCount: true,
   completedDealCount: true,
+  verifiedAt: true,
 };
 
 /** All categories. Changes a few times a year; cached for a week. */
@@ -49,6 +51,7 @@ export const getCachedCategories = unstable_cache(
 export const getCachedServices = unstable_cache(
   async () =>
     prisma.service.findMany({
+      where: LISTED_SERVICE,
       orderBy: { createdAt: "desc" },
       include: { category: true, artisan: { select: BROWSE_ARTISAN_SELECT } },
     }),

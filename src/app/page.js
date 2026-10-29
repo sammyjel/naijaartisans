@@ -6,6 +6,7 @@ import JsonLd from "@/components/JsonLd";
 import { priceRange, featuredFirst, isFeatured } from "@/lib/format";
 import { CITIES } from "@/lib/constants";
 import { allGuides } from "@/lib/guides";
+import { LISTED_SERVICE } from "@/lib/constants";
 
 // ISR. This page is public marketing content: no cookies, no headers(), no
 // per-user data, nothing that has to be true to the second. It was
@@ -64,6 +65,7 @@ export default async function HomePage() {
       include: { _count: { select: { services: true } } },
     }),
     prisma.service.findMany({
+      where: LISTED_SERVICE,
       take: 6,
       orderBy: { createdAt: "desc" },
       include: { category: true, artisan: { select: { id: true, name: true, city: true, featuredUntil: true } } },

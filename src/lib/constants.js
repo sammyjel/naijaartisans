@@ -112,3 +112,12 @@ export function cityFromSlug(slug) {
   const s = slug.toLowerCase();
   return CITIES.find((c) => citySlug(c) === s) || null;
 }
+
+/**
+ * Prisma filter for artisans the public may see. A suspended artisan (set from
+ * /admin/artisans) is left out of every listing, page, sitemap entry and job
+ * alert. Use on a User:      where: { role: "ARTISAN", ...LISTED_ARTISAN }
+ * and on a Service:          where: { ...LISTED_SERVICE }
+ */
+export const LISTED_ARTISAN = { suspendedAt: null };
+export const LISTED_SERVICE = { artisan: { suspendedAt: null } };

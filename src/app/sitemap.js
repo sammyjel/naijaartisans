@@ -5,6 +5,7 @@ import { allGuides } from "@/lib/guides";
 import { parseEditorialDate, newest, lastMod } from "@/lib/sitemap-dates";
 import { INDEXABLE_VACANCY_WHERE } from "@/lib/job-seo";
 import { activePackages } from "@/lib/dfy-catalog";
+import { LISTED_ARTISAN } from "@/lib/constants";
 
 const BASE = SITE_URL;
 
@@ -40,7 +41,7 @@ export default async function sitemap() {
   const staticRoutes = [
     "", "/browse", "/jobs", "/services", "/guides", "/pricing", "/join", "/done-for-you",
     ...activePackages().map((p) => `/done-for-you/${p.slug}`),
-    "/about", "/contact", "/help", "/terms", "/privacy", "/register",
+    "/about", "/contact", "/help", "/terms", "/privacy", "/refund-policy", "/acceptable-use", "/register",
   ].map((path) => ({
     url: `${BASE}${path}`,
     changeFrequency: path === "" ? "daily" : "weekly",
@@ -64,7 +65,7 @@ export default async function sitemap() {
     // 87 of those, so this is the difference between 4 queries and 90.
     const [artisans, jobs, categories, serviceGroups] = await Promise.all([
       prisma.user.findMany({
-        where: { role: "ARTISAN" },
+        where: { role: "ARTISAN", ...LISTED_ARTISAN },
         select: { id: true, updatedAt: true },
       }),
       prisma.jobRequest.findMany({

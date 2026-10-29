@@ -19,6 +19,9 @@ export async function POST(request) {
     if (!user || !(await verifyPassword(password, user.password)))
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
 
+    if (user.suspendedAt)
+      return NextResponse.json({ error: "This account is suspended. Contact sammyjel.ng@gmail.com if you think this is a mistake." }, { status: 403 });
+
     setAuthCookie(user.id);
     return NextResponse.json({
       user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, city: user.city },

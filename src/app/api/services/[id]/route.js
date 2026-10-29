@@ -7,10 +7,11 @@ export async function GET(_request, { params }) {
     where: { id: params.id },
     include: {
       category: true,
-      artisan: { select: { id: true, name: true, city: true, bio: true, phone: true, email: true } },
+      artisan: { select: { id: true, name: true, city: true, bio: true, phone: true, email: true, suspendedAt: true } },
     },
   });
-  if (!service) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!service || service.artisan.suspendedAt) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  delete service.artisan.suspendedAt;
   return NextResponse.json({ service });
 }
 

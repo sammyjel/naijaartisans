@@ -52,6 +52,15 @@ model User {
   proUntil      DateTime? // active Pro subscription expiry
   referredById  String? // the artisan who invited this user
 
+  // Trust & safety (admin, /admin/artisans)
+  /// Set when the owner has checked the artisan (WhatsApp/phone call). Shows the
+  /// Verified badge. Cleared by "Remove verification".
+  verifiedAt    DateTime?
+  /// A suspended artisan is hidden everywhere public (listings, profile page,
+  /// sitemap, job alerts) and cannot log in. See LISTED_ARTISAN in constants.js.
+  suspendedAt   DateTime?
+  suspendReason String?
+
   // Geolocation captured at signup (with the user's permission)
   latitude  Float?
   longitude Float?

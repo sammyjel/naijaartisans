@@ -26,6 +26,7 @@ import { sendEmail, emailConfigured } from "./email";
 import { notifyOperator } from "./alerts";
 import { SITE_URL } from "./seo";
 import { track, trackZeroMatch } from "./metrics";
+import { LISTED_ARTISAN } from "./constants";
 import {
   MAX_ARTISANS_PER_JOB,
   NOTIFY_SCOPE,
@@ -75,6 +76,7 @@ export async function findEligibleArtisansForJob(job, limit = MAX_ARTISANS_PER_J
   const candidates = await prisma.user.findMany({
     where: {
       role: "ARTISAN",
+      ...LISTED_ARTISAN,
       // The customer must never be notified about their own job.
       ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
       // Default scope is "matched": only artisans who list this trade hear about

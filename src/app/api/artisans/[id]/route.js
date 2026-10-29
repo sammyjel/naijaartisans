@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { LISTED_ARTISAN } from "@/lib/constants";
 
 // Public artisan profile: basic info, their services, and reviews.
 export async function GET(_request, { params }) {
-  const artisan = await prisma.user.findUnique({
-    where: { id: params.id },
+  const artisan = await prisma.user.findFirst({
+    where: { id: params.id, ...LISTED_ARTISAN },
     select: {
       id: true, name: true, city: true, bio: true, role: true, phone: true, email: true, createdAt: true,
       services: { include: { category: true }, orderBy: { createdAt: "desc" } },

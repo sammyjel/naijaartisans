@@ -119,6 +119,8 @@ export default function RootLayout({ children }) {
                     <li><Link href="/help" className="hover:text-brand-700">Help &amp; FAQ</Link></li>
                     <li><Link href="/terms" className="hover:text-brand-700">Terms of Service</Link></li>
                     <li><Link href="/privacy" className="hover:text-brand-700">Privacy Policy</Link></li>
+                    <li><Link href="/refund-policy" className="hover:text-brand-700">Refund Policy</Link></li>
+                    <li><Link href="/acceptable-use" className="hover:text-brand-700">Acceptable Use</Link></li>
                   </ul>
                 </div>
 

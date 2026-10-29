@@ -40,6 +40,7 @@
 
 import { rankArtisansForJob } from "./matching.js";
 import { sendEmail, emailConfigured } from "./email.js";
+import { LISTED_ARTISAN } from "./constants.js";
 
 const esc = (v) =>
   String(v ?? "")
@@ -198,7 +199,7 @@ export async function runJobBackfill(prisma, opts = {}) {
   });
 
   const artisans = await prisma.user.findMany({
-    where: { role: "ARTISAN" },
+    where: { role: "ARTISAN", ...LISTED_ARTISAN },
     select: {
       id: true,
       name: true,

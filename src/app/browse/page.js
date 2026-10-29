@@ -14,6 +14,7 @@ import { CITIES } from "@/lib/constants";
 import { reviewExcerptsByArtisan } from "@/lib/reviews";
 import { getCachedCategories, getCachedServices } from "@/lib/cached-queries";
 import { isUnfiltered } from "@/lib/cache-policy";
+import { LISTED_SERVICE } from "@/lib/constants";
 
 // STAYS DYNAMIC ON PURPOSE. This page reads searchParams (category, city, q, lat,
 // lng), which already opts it out of static rendering, so adding a `revalidate`
@@ -29,7 +30,7 @@ const TOP_CITIES = [
 ].filter((c) => CITIES.includes(c));
 
 function buildWhere({ category, city, q }) {
-  const where = {};
+  const where = { ...LISTED_SERVICE };
   if (category) where.category = { slug: category };
   if (city) where.city = city;
   if (q) where.OR = [{ title: { contains: q } }, { description: { contains: q } }];
@@ -80,7 +81,7 @@ export default async function BrowsePage({ searchParams }) {
               select: {
                 id: true, name: true, city: true, featuredUntil: true, latitude: true, longitude: true,
                 avatarUrl: true, ratingAverage: true, reviewCount: true,
-                completedDealCount: true,
+                completedDealCount: true, verifiedAt: true,
               },
             },
           },
@@ -188,7 +189,7 @@ export default async function BrowsePage({ searchParams }) {
                       </span>
                     )}
                     <span className="min-w-0">
-                      <span className="block truncate font-semibold">{s.artisan.name}</span>
+                      <span className="block truncate font-semibold">{s.artisan.name}{s.artisan.verifiedAt && <span className="ml-1 text-xs font-semibold text-green-700" title="Verified by NaijaArtisans">✓ Verified</span>}</span>
                       {/* Stars shows "New · no reviews yet" when the average is
                           null, so an unrated artisan never renders as 5.0 (0). */}
                       <Stars

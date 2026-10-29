@@ -72,8 +72,11 @@ export async function getCurrentUser() {
       proUntil: true,
       latitude: true,
       longitude: true,
+      suspendedAt: true,
       _count: { select: { referrals: true } },
     },
   });
+  // A suspended account is logged out everywhere, not just at the login form.
+  if (!user || user.suspendedAt) return null;
   return user;
 }
