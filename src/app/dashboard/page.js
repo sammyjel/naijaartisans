@@ -9,6 +9,7 @@ import LocationUpdater from "@/components/LocationUpdater";
 import AvatarUploader from "@/components/AvatarUploader";
 import PortfolioUploader from "@/components/PortfolioUploader";
 import UpgradeCard from "@/components/UpgradeCard";
+import VerificationCard from "@/components/VerificationCard";
 import NotificationsPanel from "@/components/NotificationsPanel";
 import DealsPanel from "@/components/DealsPanel";
 import PhoneEditor from "@/components/PhoneEditor";
@@ -93,6 +94,13 @@ export default function DashboardPage() {
         <PhoneEditor />
       </section>
 
+      {/* Verification — asked for here, on the site, never by cold WhatsApp. */}
+      {isArtisan && (
+        <section id="verify" className="mt-6 scroll-mt-20">
+          <VerificationCard />
+        </section>
+      )}
+
       {/* Upgrade — automated Featured / Pro */}
       {isArtisan && (
         <section id="upgrade" className="mt-6 scroll-mt-20">
@@ -107,9 +115,9 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Work photos / portfolio (optional) */}
+      {/* Work photos / portfolio (optional; 2+ needed for verification) */}
       {isArtisan && (
-        <section className="mt-6">
+        <section id="photos" className="mt-6 scroll-mt-20">
           <PortfolioUploader />
         </section>
       )}

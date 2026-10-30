@@ -60,6 +60,12 @@ model User {
   /// sitemap, job alerts) and cannot log in. See LISTED_ARTISAN in constants.js.
   suspendedAt   DateTime?
   suspendReason String?
+  /// Artisan asked to be verified from their dashboard (VerificationCard).
+  /// Cleared on verify; a decline keeps it and sets verifyDeclinedReason, which
+  /// is cleared again when they re-apply.
+  verifyRequestedAt    DateTime?
+  verifyArea           String?
+  verifyDeclinedReason String?
 
   // Geolocation captured at signup (with the user's permission)
   latitude  Float?

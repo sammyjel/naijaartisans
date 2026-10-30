@@ -106,7 +106,7 @@ export default function NotificationsPanel({ role }) {
                   className="flex items-start gap-3 px-1 py-3 transition hover:bg-gray-50"
                 >
                   <span aria-hidden className="mt-0.5 text-lg">
-                    {n.type === "NEW_QUOTE" ? "💬" : "🔔"}
+                    {n.type === "NEW_QUOTE" ? "💬" : n.type.startsWith("VERIFY") ? "✅" : "🔔"}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export default function NotificationsPanel({ role }) {
                     </span>
                   </span>
                   <span className="shrink-0 self-center text-sm font-semibold text-brand-700">
-                    {n.type === "NEW_QUOTE" ? "See quote →" : "View job →"}
+                    {n.type === "NEW_QUOTE" ? "See quote →" : n.type.startsWith("VERIFY") ? "Open →" : "View job →"}
                   </span>
                 </Link>
               </li>

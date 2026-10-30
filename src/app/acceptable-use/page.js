@@ -69,9 +69,12 @@ export default function AcceptableUsePage() {
 
         <Section title="6. How we check artisans">
           <p className="text-gray-700">
-            Every artisan signs up with a name, trade, city and phone number or email. We contact artisans by phone or
-            WhatsApp to confirm their identity, trade and work area and ask for photos of real work. Those who pass get a{" "}
-            <strong className="text-green-700">✓ Verified</strong> badge on their profile. Customer reviews and a count of
+            Every artisan signs up with a name, trade, city and phone number or email. To protect customers from fraud,
+            artisans then request verification from their dashboard on this website: they confirm the area they work in and
+            upload photos of their own work, and we review every request by hand. Those who pass get a{" "}
+            <strong className="text-green-700">✓ Verified</strong> badge on their profile. Verification happens only on
+            naijaartisans.com. <strong>We will never ask anyone for money, BVN, OTP, PIN or bank details</strong> by WhatsApp,
+            phone or email. If someone does, it isn't us: please report it. Customer reviews and a count of
             customer-confirmed completed jobs are shown on each profile. NaijaArtisans does not pay artisans or hold money
             for them, so we never ask artisans for bank details. Always meet and agree the price and scope before work begins.
           </p>
