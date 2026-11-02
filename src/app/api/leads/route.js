@@ -3,10 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { emailConfigured, sendEmail } from "@/lib/email";
 import { SITE_URL } from "@/lib/seo";
 
-// Where new-lead alerts go. Set LEAD_NOTIFY_EMAIL in Vercel to your real inbox
-// (e.g. your Gmail) so you actually receive them.
-const OWNER_EMAIL = (process.env.LEAD_NOTIFY_EMAIL || "sammyjel.ng@gmail.com").trim();
-
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -38,24 +34,9 @@ export async function POST(request) {
       console.error("lead store failed (table missing?)", e);
     }
 
-    // Notify the owner so they can follow up on WhatsApp quickly.
+    // No email to the owner for a sign-up: the owner asked (2026-11-03) to be
+    // emailed about posted jobs only. New leads are listed on /admin instead.
     if (emailConfigured()) {
-      const waLink = `https://wa.me/${digits}`;
-      sendEmail({
-        to: OWNER_EMAIL,
-        subject: `🚀 New ${side === "ARTISAN" ? "Founding Artisan" : "customer"} lead: ${name}`,
-        html: `
-          <h2>New ${side.toLowerCase()} lead</h2>
-          <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-          <p><strong>WhatsApp:</strong> <a href="${waLink}">${escapeHtml(whatsapp)}</a></p>
-          ${trade ? `<p><strong>Trade:</strong> ${escapeHtml(trade)}</p>` : ""}
-          ${city ? `<p><strong>City:</strong> ${escapeHtml(city)}</p>` : ""}
-          ${email ? `<p><strong>Email:</strong> ${escapeHtml(email)}</p>` : ""}
-          <p><strong>Magnet:</strong> ${escapeHtml(magnet || "-")} · <strong>Source:</strong> ${escapeHtml(source || "-")}</p>
-          <p><a href="${waLink}">👉 Message ${escapeHtml(name.split(" ")[0])} on WhatsApp</a></p>
-        `,
-      }).catch(() => {});
-
       // Welcome the lead by email if they gave one (side-appropriate).
       if (email) {
         const first = name.split(" ")[0];
