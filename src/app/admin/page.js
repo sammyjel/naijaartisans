@@ -123,6 +123,7 @@ export default async function AdminPage() {
         <div className="flex gap-2">
           <a href="/admin/orders" className="btn-primary">Done-for-you orders</a>
           <a href="/admin/artisans" className="btn-outline">Verify / suspend artisans</a>
+          <a href="/admin/post-job" className="btn-outline">Post a job for a customer</a>
           <AdminLogout />
         </div>
       </div>
