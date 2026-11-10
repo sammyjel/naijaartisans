@@ -67,6 +67,8 @@ export default async function JobDetailPage({ params }) {
   if (!job) notFound();
 
   const isOwner = user?.id === job.customerId;
+  // Held posts (see lib/job-screen.js) are private until the owner approves them.
+  if (job.status === "HELD" && !isOwner) notFound();
   const quotedArtisanIds = job.quotes.map((q) => q.artisan.id);
 
   // A job may only have one deal running at a time. While one does, the other

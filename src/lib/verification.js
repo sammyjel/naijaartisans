@@ -73,6 +73,7 @@ export async function requestVerification(userId, { area, confirm }) {
   });
   notifyOperator({
     title: "Verification request",
+    subject: `[NaijaArtisans] VERIFY REQUEST · ${u.name}`,
     intro: `${u.name} has asked to be verified. Check their photos and details, then verify or decline.`,
     rows: [["Artisan", u.name], ["Area", cleanArea], ["Photos", String((u.galleryUrls || []).length)]],
     cta: { label: "Review requests", href: String(SITE_URL).replace(/\/+$/, "") + "/admin/artisans?f=requests" },

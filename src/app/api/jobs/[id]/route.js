@@ -18,6 +18,7 @@ export async function GET(_request, { params }) {
   if (!job) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
   const isOwner = user?.id === job.customerId;
+  if (job.status === "HELD" && !isOwner) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
   // SECURITY: strip contact details the caller is not entitled to.
   //
@@ -57,6 +58,10 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: "Not allowed." }, { status: 403 });
 
   const { status } = await request.json();
+  // A held post is released by the owner in /admin, never by its poster —
+  // otherwise "reopen" would put the advert straight back on the board.
+  if (job.status === "HELD" && status !== "CLOSED")
+    return NextResponse.json({ error: "This post is waiting for a quick check by our team." }, { status: 400 });
   if (!["OPEN", "CLOSED"].includes(status))
     return NextResponse.json({ error: "Invalid status." }, { status: 400 });
 

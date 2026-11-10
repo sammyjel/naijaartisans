@@ -355,10 +355,10 @@ export function alertOwnerOfJob(job, categoryName, stats) {
       ? `New ${categoryName} job — NO ${categoryName.toUpperCase()} ARTISANS ON THE SITE`
       : reachedNobody ? "New job posted — BUT NOBODY WAS EMAILED" : "New job posted",
     subject: noTrade
-      ? `[NaijaArtisans] No ${categoryName} artisans for: ${job.title}`
+      ? `[NaijaArtisans] JOB POSTED · no ${categoryName} artisans to send it to: ${job.title}`
       : reachedNobody
-      ? `[NaijaArtisans] Job posted but 0 artisans emailed — ${job.title}`
-      : `[NaijaArtisans] New ${categoryName} job: ${job.title} (${stats.emailed} artisans emailed)`,
+      ? `[NaijaArtisans] JOB POSTED · 0 artisans emailed: ${job.title}`
+      : `[NaijaArtisans] JOB POSTED · ${categoryName} in ${job.city}: ${job.title} (${stats.emailed} artisans emailed)`,
     urgent: reachedNobody,
     intro: noTrade
       ? `A customer posted a ${categoryName} job in ${job.city}, and no artisan on the site lists ${categoryName}, so nobody was alerted. Find one (WhatsApp groups, referrals) and send them the job link, or the customer will hear nothing.`

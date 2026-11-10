@@ -75,6 +75,8 @@ export const getCachedServices = unstable_cache(
 export const getCachedJobBoard = unstable_cache(
   async () =>
     prisma.jobRequest.findMany({
+      // HELD = a self-advert waiting for the owner (lib/job-screen.js); never public.
+      where: { status: { not: "HELD" } },
       orderBy: { createdAt: "desc" },
       include: {
         category: true,

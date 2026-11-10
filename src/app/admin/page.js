@@ -8,6 +8,7 @@ import QuoteBackfillPanel from "@/components/QuoteBackfillPanel";
 import AdminJobFollowUp from "@/components/AdminJobFollowUp";
 import FollowUpPanel from "@/components/FollowUpPanel";
 import MarketingHub from "@/components/MarketingHub";
+import AdminHeldPosts from "@/components/AdminHeldPosts";
 import { isFeatured } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -103,6 +104,22 @@ export default async function AdminPage() {
     followUpJobs = [];
   }
 
+  // Posts held as likely self-adverts (lib/job-screen.js), oldest first.
+  let heldPosts = [];
+  try {
+    heldPosts = await prisma.jobRequest.findMany({
+      where: { status: "HELD" },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true, title: true, description: true, city: true, createdAt: true,
+        category: { select: { name: true } },
+        customer: { select: { name: true, role: true } },
+      },
+    });
+  } catch {
+    heldPosts = [];
+  }
+
   // Marketing leads (guarded — Lead table may not exist before the migration).
   let leads = [];
   try {
@@ -136,6 +153,8 @@ export default async function AdminPage() {
         <Stat label="Joined this week" value={newThisWeek} accent="text-brand-600" />
         <Stat label={`Revenue (${paymentCount} paid)`} value={`₦${revenueNaira.toLocaleString("en-NG")}`} accent="text-green-700" />
       </div>
+
+      <AdminHeldPosts posts={heldPosts} />
 
       <MarketingHub />
 

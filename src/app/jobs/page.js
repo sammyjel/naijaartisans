@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }) {
 
 export default async function JobsPage({ searchParams }) {
   const { category = "", city = "" } = searchParams;
-  const where = {};
+  const where = { status: { not: "HELD" } };
   if (category) where.category = { slug: category };
   if (city) where.city = city;
 

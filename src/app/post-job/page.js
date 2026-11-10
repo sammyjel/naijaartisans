@@ -85,6 +85,7 @@ function PostJobForm() {
         return;
       }
       setPosted({
+        held: Boolean(data.held),
         jobId: data.job.id,
         artisans: data.notified?.artisans ?? 0,
         eligible: data.notified?.eligible ?? 0,
@@ -196,7 +197,23 @@ function PostJobForm() {
 
         {error && <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 
-        {posted ? (
+        {posted?.held ? (
+          /* lib/job-screen.js held it: it read like an advert, or came from an
+             artisan account. Say so plainly and point at the profile, which is
+             where an artisan actually gets found. */
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+            <p className="text-lg font-bold text-amber-900">Thanks, we&apos;ve received your post.</p>
+            <p className="mt-1 text-sm text-amber-900">
+              Our team will check it before it goes on the job board. The job board is for people who
+              need work done. If you are an artisan who wants customers to find you, your profile is
+              the place: add your trade, a clear phone number and photos of your work.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/dashboard" className="btn-primary">Complete my profile</Link>
+              <Link href="/jobs" className="btn-outline">See jobs I can quote for</Link>
+            </div>
+          </div>
+        ) : posted ? (
           <div className="mt-6">
             <div className="rounded-xl border border-green-200 bg-green-50 p-5">
               <p className="text-lg font-bold text-green-900">Your job is live.</p>

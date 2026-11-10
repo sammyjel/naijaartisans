@@ -3,6 +3,7 @@ import { recordConversion } from "@/lib/attribution";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setAuthCookie } from "@/lib/auth";
 import { phoneProblem } from "@/lib/phone";
+import { alertNewArtisan } from "@/lib/alerts";
 
 export async function POST(request) {
   try {
@@ -66,12 +67,14 @@ export async function POST(request) {
 
     // If an artisan picked a trade, create a starter listing so they show up on
     // "Find Artisans" immediately (they can edit prices/details later).
+    let tradeName = null;
     if (user.role === "ARTISAN") {
       const catId = (categoryId || "").trim();
       if (catId) {
         try {
           const cat = await prisma.category.findUnique({ where: { id: catId }, select: { id: true, name: true } });
           if (cat) {
+            tradeName = cat.name;
             await prisma.service.create({
               data: {
                 title: cat.name,
@@ -117,6 +120,14 @@ export async function POST(request) {
       subjectId: user.id,
       conversionPath: "/register",
     });
+
+    // The owner hears about a new ARTISAN, labelled "NEW ARTISAN · verify" so it
+    // can never be mistaken for a job. Nobody else is emailed about a sign-up,
+    // and a customer signing up sends nothing (owner's split, 2026-11-10).
+    // Awaited: Vercel may kill work left running after the response.
+    if (user.role === "ARTISAN") {
+      await alertNewArtisan(user, tradeName).catch((e) => console.error("new-artisan alert failed", e));
+    }
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (err) {

@@ -5,6 +5,8 @@ import { notifyArtisansOfJob } from "@/lib/notifications";
 import { track } from "@/lib/metrics";
 import { revalidateFor } from "@/lib/cached-queries";
 import { recordConversion } from "@/lib/attribution";
+import { screenJobPost, holdReasonText, HELD } from "@/lib/job-screen";
+import { alertHeldPost } from "@/lib/alerts";
 
 // GET /api/jobs?category=plumbing&city=Lagos&mine=1
 export async function GET(request) {
@@ -21,6 +23,8 @@ export async function GET(request) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "You must be logged in." }, { status: 401 });
     where.customerId = user.id;
+  } else {
+    where.status = { not: HELD }; // held posts are not public
   }
 
   const jobs = await prisma.jobRequest.findMany({
@@ -54,10 +58,21 @@ export async function POST(request) {
   const category = await prisma.category.findUnique({ where: { id: categoryId } });
   if (!category) return NextResponse.json({ error: "Invalid category." }, { status: 400 });
 
+  // An artisan advertising themselves through this form is not a job. It is
+  // saved as HELD: off the board, no artisan emailed, no "job posted" alert,
+  // until the owner approves it in /admin. See lib/job-screen.js.
+  const screen = screenJobPost({ posterRole: user.role, title, description });
+
   const job = await prisma.jobRequest.create({
-    data: { title, description, city, categoryId, budget, customerId: user.id },
+    data: { title, description, city, categoryId, budget, customerId: user.id, ...(screen.hold ? { status: HELD } : {}) },
     include: { category: true },
   });
+
+  if (screen.hold) {
+    track("job_held", { jobId: job.id, reason: screen.reason });
+    await alertHeldPost(job, user, holdReasonText(screen.reason)).catch(() => {});
+    return NextResponse.json({ job, held: true }, { status: 201 });
+  }
 
   track("job_posted", { jobId: job.id, categoryId, city, hasBudget: Boolean(budget) });
 

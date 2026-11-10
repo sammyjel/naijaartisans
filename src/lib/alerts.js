@@ -233,3 +233,61 @@ export function alertOrderOverdue(order, pkg, daysLate) {
     cta: { label: "Open order", href: orderUrl(order.reference) },
   });
 }
+
+// ── Marketplace alerts ──────────────────────────────────────────────────────
+// Every owner email about the marketplace starts its subject with one of these
+// labels, so the inbox sorts itself and a sign-up can never read as a job:
+//
+//   JOB POSTED      a customer job went out to artisans          (notifications.js)
+//   HELD POST       a "job" that looks like an advert, NOT sent  (below)
+//   NEW ARTISAN     an artisan signed up — check and verify      (below)
+//   VERIFY REQUEST  an artisan asked to be verified              (verification.js)
+//
+// Artisans only ever get JOB POSTED (as a "New job available" email). Nothing
+// about a sign-up or a held post is sent to anyone but the owner.
+
+export const LABEL = {
+  JOB: "JOB POSTED",
+  HELD: "HELD POST",
+  ARTISAN: "NEW ARTISAN",
+  VERIFY: "VERIFY REQUEST",
+};
+
+function siteUrl(path) {
+  return (process.env.NEXT_PUBLIC_SITE_URL || "https://naijaartisans.com").replace(/\/+$/, "") + path;
+}
+
+/** An artisan has just created an account. Owner only. */
+export function alertNewArtisan(user, tradeName) {
+  return notifyOperator({
+    title: "New artisan signed up — verification needed",
+    subject: `[${siteName()}] ${LABEL.ARTISAN} · verify: ${user.name}${tradeName ? ` (${tradeName}` + (user.city ? `, ${user.city})` : ")") : user.city ? ` (${user.city})` : ""}`,
+    intro:
+      "A new artisan has joined. Nobody else has been emailed — this is not a job. Check their profile, and verify them once they have added a clear photo of their work and a working phone number.",
+    rows: [
+      ["Name", user.name],
+      tradeName ? ["Trade", tradeName] : null,
+      user.city ? ["City", user.city] : null,
+      user.phone ? ["Phone", user.phone] : null,
+      user.email ? ["Email", user.email] : null,
+    ],
+    cta: { label: "Review artisans", href: siteUrl("/admin/artisans") },
+  });
+}
+
+/** A post was kept off the board because it looks like an advert. Owner only. */
+export function alertHeldPost(job, poster, reasonText) {
+  return notifyOperator({
+    title: "Post held — looks like an advert, not a job",
+    subject: `[${siteName()}] ${LABEL.HELD} · not sent to artisans: ${job.title}`,
+    intro: `${reasonText} It is NOT on the job board and NO artisan was emailed. If it is a real job, approve it on the admin page and it goes out as normal. Otherwise reject it.`,
+    rows: [
+      ["Title", job.title],
+      ["Posted by", `${poster.name} (${poster.role === "ARTISAN" ? "artisan account" : "customer account"})`],
+      poster.phone ? ["Phone", poster.phone] : null,
+      ["City", job.city],
+      ["Text", String(job.description || "").slice(0, 300)],
+    ],
+    cta: { label: "Approve or reject", href: siteUrl("/admin#held-posts") },
+  });
+}
