@@ -18,5 +18,4 @@
 ## About
 - Type: Full-stack web application (Next.js, Prisma, PostgreSQL, Tailwind CSS), deployed on Vercel.
 - Region served: Nigeria.
-- Contact / support: sammyjel.ng@gmail.com
-- Source code: https://github.com/sammyjel/naijaartisans
+- Contact / support: naijaartisans.help@gmail.com

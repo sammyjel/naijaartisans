@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 const UPDATED = "30 October 2026";
-const SUPPORT = "sammyjel.ng@gmail.com";
+const SUPPORT = "naijaartisans.help@gmail.com";
 
 export default function AcceptableUsePage() {
   return (

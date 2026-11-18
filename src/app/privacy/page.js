@@ -87,7 +87,7 @@ export default function PrivacyPage() {
           </ul>
           <p className="mt-2 text-gray-700">
             To exercise any of these rights, email{" "}
-            <a href="mailto:sammyjel.ng@gmail.com" className="text-brand-700 hover:underline">sammyjel.ng@gmail.com</a>.
+            <a href="mailto:naijaartisans.help@gmail.com" className="text-brand-700 hover:underline">naijaartisans.help@gmail.com</a>.
           </p>
         </Section>
 
@@ -140,7 +140,7 @@ export default function PrivacyPage() {
         <Section title="10. Contact us">
           <p className="text-gray-700">
             Questions about your privacy? Email{" "}
-            <a href="mailto:sammyjel.ng@gmail.com" className="text-brand-700 hover:underline">sammyjel.ng@gmail.com</a>.
+            <a href="mailto:naijaartisans.help@gmail.com" className="text-brand-700 hover:underline">naijaartisans.help@gmail.com</a>.
           </p>
         </Section>
 

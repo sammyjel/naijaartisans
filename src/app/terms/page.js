@@ -129,7 +129,7 @@ export default function TermsPage() {
         <Section title="12. Contact">
           <p className="text-gray-700">
             Questions about these Terms? Email{" "}
-            <a href="mailto:sammyjel.ng@gmail.com" className="text-brand-700 hover:underline">sammyjel.ng@gmail.com</a>.
+            <a href="mailto:naijaartisans.help@gmail.com" className="text-brand-700 hover:underline">naijaartisans.help@gmail.com</a>.
           </p>
         </Section>
 
