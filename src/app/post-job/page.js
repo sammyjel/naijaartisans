@@ -295,8 +295,26 @@ function PostJobForm() {
               value={form.description}
               onChange={(e) => update("description", e.target.value)}
               required
+              minLength={15}
             />
           </div>
+          {/* Asked only of accounts made with a phone number alone: without an
+              email, NaijaArtisans cannot tell the customer about quotes or follow
+              up, and the job dies silently (Olajide's shoe job, 2026-11-17). */}
+          {!user.email && (
+            <div>
+              <label className="label">Your email</label>
+              <input
+                className="input"
+                type="email"
+                placeholder="you@example.com"
+                value={form.email || ""}
+                onChange={(e) => update("email", e.target.value)}
+                required
+              />
+              <p className="mt-1 text-xs text-gray-500">We email you when artisans send quotes. We never share it.</p>
+            </div>
+          )}
           <button className="btn-primary w-full" disabled={submitting}>
             {submitting ? "Posting…" : "Post job"}
           </button>

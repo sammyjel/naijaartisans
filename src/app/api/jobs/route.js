@@ -54,6 +54,21 @@ export async function POST(request) {
 
   if (!title || !description || !categoryId || !city)
     return NextResponse.json({ error: "Title, description, category and city are required." }, { status: 400 });
+  // "The eve" (2026-11-17) told artisans nothing; nobody quotes on a job they can't understand.
+  if (description.length < 15)
+    return NextResponse.json({ error: "Please describe the job in a little more detail (what, where, when)." }, { status: 400 });
+
+  // Every job needs a way to reach its customer by email: quotes and follow-ups
+  // go out by email, and a phone-only account leaves the job unreachable.
+  if (!user.email) {
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return NextResponse.json({ error: "Please add your email so we can tell you when artisans send quotes." }, { status: 400 });
+    const taken = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (taken && taken.id !== user.id)
+      return NextResponse.json({ error: "That email belongs to another account. Log in with it, or use a different email." }, { status: 409 });
+    await prisma.user.update({ where: { id: user.id }, data: { email } });
+  }
 
   const category = await prisma.category.findUnique({ where: { id: categoryId } });
   if (!category) return NextResponse.json({ error: "Invalid category." }, { status: 400 });
